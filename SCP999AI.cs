@@ -4,7 +4,6 @@ using System.Diagnostics;
 using BepInEx.Logging;
 using GameNetcodeStuff;
 using LethalLib;
-using SCP956;
 using Unity.Netcode;
 using UnityEngine;
 using static SCP999.Plugin;
@@ -15,9 +14,12 @@ using static Netcode.Transports.Facepunch.FacepunchTransport;
 //using SCP999.Patches;
 using System.Drawing;
 using Unity.Services.Authentication;
+using HarmonyLib;
+using ES3Types;
 
 namespace SCP999
 {
+    // Movement speed 5f
     class SCP999AI : EnemyAI
     {
         private static ManualLogSource logger = LoggerInstance;
@@ -25,35 +27,78 @@ namespace SCP999
 #pragma warning disable 0649
         public Transform turnCompass = null!;
 #pragma warning restore 0649
-        float timeSinceNewRandPos;
 
-        float timeSinceHittingPlayer;
+        EnemyAI targetEnemy;
+
+        float timeSinceHealing;
+        float healingBuffTime;
+        float hyperTime;
+
+        int playerHealAmount;
+        int enemyHealAmount;
+
+        float playerDetectionRange;
+        float enemyDetectionRange;
+        float rangeMultiplier = 1f;
+        float followingRange;
+
+        bool walking = true;
+        bool hugging = false;
+        bool dancing = false;
+
+        int maxCandy = 3;
+        int candyEaten;
 
         enum State
         {
-            Roamin,
+            Roaming,
             Following,
-            Healing
+            Healing,
+            Hyper
         }
 
         public override void Start()
         {
             base.Start();
-            logger.LogDebug("SCP-956 Spawned");
+            logger.LogDebug("SCP-999 Spawned");
 
-            timeSinceHittingPlayer = 0f;
-            timeSinceNewRandPos = 0f;
+            playerHealAmount = configPlayerHealAmount.Value;
+            enemyHealAmount = configEnemyHealAmount.Value;
 
-            currentBehaviourStateIndex = (int)State.Roamin;
+            playerDetectionRange = configPlayerDetectionRange.Value;
+            enemyDetectionRange = configEnemyDetectionRange.Value;
+
+            followingRange = configFollowRange.Value;
+
+            candyEaten = 0;
+
+            timeSinceHealing = 0f;
+            healingBuffTime = 0f;
+            hyperTime = 0f;
+
+            currentBehaviourStateIndex = (int)State.Roaming;
             RoundManager.Instance.SpawnedEnemies.Add(this);
+
+            //StartSearch(transform.position);
+            //agent.obstacleAvoidanceType = UnityEngine.AI.ObstacleAvoidanceType.NoObstacleAvoidance; // TODO: Use this if enemy still collides with other enemies
         }
 
         public override void Update()
         {
             base.Update();
 
-            timeSinceNewRandPos += Time.deltaTime;
-            timeSinceHittingPlayer += Time.deltaTime;
+            timeSinceHealing += Time.deltaTime;
+
+            if (healingBuffTime > 0f)
+            {
+                healingBuffTime -= Time.deltaTime;
+                candyEaten = 0;
+            }
+
+            if (hyperTime > 0f)
+            {
+                hyperTime -= Time.deltaTime;
+            }
 
             var state = currentBehaviourStateIndex;
 
@@ -66,162 +111,262 @@ namespace SCP999
 
         public override void DoAIInterval()
         {
-            logger.LogDebug("Do AI Interval");
             base.DoAIInterval();
+
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead)
             {
                 return;
-            }
+            };
 
             switch (currentBehaviourStateIndex)
             {
-                case (int)State.Roamin:
-                    agent.speed = 0f;
-                    if (TargetFrozenPlayerInRange(config956ActivationRadius.Value))
+                case (int)State.Roaming:
+                    agent.speed = 5f;
+                    if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
                     {
-                        logger.LogDebug("Start Killing Player");
-                        SwitchToBehaviourClientRpc((int)State.MovingTowardsPlayer);
-                        return;
-                    }
-                    if (configSecretLab.Value && timeSinceRandTeleport > config956TeleportTime.Value) // TODO: Test this more
-                    {
-                        logger.LogDebug("Teleporting");
-                        Vector3 pos = RoundManager.Instance.GetRandomNavMeshPositionInBoxPredictable(transform.position, config956TeleportRange.Value, RoundManager.Instance.navHit, RoundManager.Instance.AnomalyRandom);
-                        Teleport(pos);
-                        timeSinceRandTeleport = 0;
+                        StopSearch(currentSearch);
+                        SwitchToBehaviourClientRpc((int)State.Following);
+                        break;
                     }
                     break;
 
                 case (int)State.Following:
-                    agent.speed = 0.5f;
-                    timeSinceRandTeleport = 0;
-                    if (!TargetFrozenPlayerInRange(config956ActivationRadius.Value))
+                    if (healingBuffTime > 0f) { agent.speed = 10f; } else { agent.speed = 5f; }
+                    // Keep targeting closest player, unless they are over playerDetectionRange units away and we can't see them.
+                    if (!TargetClosestEntity())
                     {
-                        logger.LogDebug("Stop Killing Players");
-                        SwitchToBehaviourClientRpc((int)State.Dormant);
+                        logger.LogDebug("Stop Target Player");
+                        targetPlayer = null;
+                        targetEnemy = null;
+                        SwitchToBehaviourClientRpc((int)State.Roaming);
+                        StartSearch(transform.position);
                         return;
                     }
-                    MoveToPlayer();
+                    
+                    if (MoveToSweetsIfDroppedByPlayer()) { EatSweetsIfClose(); return; }
+                    FollowTarget();
+
                     break;
 
                 case (int)State.Healing:
-
+                    agent.speed = 10f; // TODO: Test this
+                    MoveToHealTarget();
                     break;
-                default:
-                    logger.LogWarning("Unhandled State");
-                    break;
-            }
-        }
 
-        public IEnumerator HeadbuttAttack()
-        {
-            SwitchToBehaviourClientRpc((int)State.HeadButtAttackInProgress);
-            PlayerControllerB player = targetPlayer;
-            Vector3 playerPos = player.transform.position;
-
-            yield return new WaitForSeconds(3f);
-            logger.LogDebug("Headbutting");
-            DoAnimationClientRpc("headButt");
-
-            yield return new WaitForSeconds(0.5f);
-            logger.LogDebug($"Damaging player: {targetPlayer.playerUsername}");
-            DamageTargetPlayerClientRpc(player.actualClientId);
-            creatureSFX.PlayOneShot(BoneCracksfx);
-
-            yield return new WaitForSeconds(0.5f);
-
-            if (player.isPlayerDead)
-            {
-                creatureVoice.PlayOneShot(PlayerDeathsfx);
-
-                logger.LogDebug("Player died, spawning candy");
-                int candiesCount = UnityEngine.Random.Range(configCandyMinSpawn.Value, configCandyMaxSpawn.Value);
-
-                for (int i = 0; i < candiesCount; i++)
-                {
-                    Vector3 pos = RoundManager.Instance.GetRandomNavMeshPositionInRadius(playerPos, 1.5f, RoundManager.Instance.navHit);
-                    NetworkHandler.Instance.SpawnItemServerRpc(0, CandyNames[UnityEngine.Random.Range(0, CandyNames.Count)], 0, pos, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 361f), 0f), false, true);
-                }
-
-                //NetworkHandler.Instance.FrozenPlayers.Remove(player.actualClientId);
-                targetPlayer = null;
-            }
-            if (currentBehaviourStateIndex != (int)State.HeadButtAttackInProgress)
-            {
-                yield break;
-            }
-            SwitchToBehaviourClientRpc((int)State.MovingTowardsPlayer);
-        }
-
-        bool TargetFrozenPlayerInRange(float range)
-        {
-            //SwitchToBehaviourServerRpc((int)State.HeadButtAttackInProgress); // TODO: Use this
-            targetPlayer = null;
-
-
-            /*if (NetworkHandler.Instance.FrozenPlayers == null) { return false; } // TODO: Check chatgpt and learn more about making freezing players more modular and decoupleable
-            if (NetworkHandler.Instance.FrozenPlayers.Count > 0)
-            {
-                foreach (ulong id in NetworkHandler.Instance.FrozenPlayers)
-                {
-                    PlayerControllerB player = StartOfRound.Instance.allPlayerScripts[StartOfRound.Instance.ClientPlayerList[id]];
-                    if (player == null || player.disconnectedMidGame || player.isPlayerDead || !player.isPlayerControlled) { NetworkHandler.Instance.FrozenPlayers.Remove(id); continue; }
-                    if (Vector3.Distance(transform.position, player.transform.position) < range && PlayerIsTargetable(player))
+                case (int)State.Hyper:
+                    agent.speed = 20f;
+                    if (hyperTime <= 0f)
                     {
-                        targetPlayer = player;
+                        candyEaten = 0;
+                        DoAnimationClientRpc("stopDancing");
+                        SwitchToBehaviourClientRpc((int)State.Roaming);
+                        StartSearch(transform.position);
+                    }
+                    break;
+
+                default:
+                    logger.LogWarning("Invalid state: " + currentBehaviourStateIndex);
+                    break;
+            }
+        }
+
+        public bool TargetClosestEntity()
+        {
+            if (targetPlayer != null && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange / 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
+            else if (targetEnemy != null && TargetClosestEnemy() && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange / 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
+            else { return false; }
+        }
+
+        public bool TargetClosestEnemy(float bufferDistance = 1.5f, bool requireLineOfSight = false, float viewWidth = 70f)
+        {
+            mostOptimalDistance = 2000f;
+            EnemyAI previousTarget = targetEnemy;
+            targetEnemy = null;
+            foreach (EnemyAI enemy in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (!PathIsIntersectedByLineOfSight(enemy.transform.position, calculatePathDistance: false, avoidLineOfSight: false) && (!requireLineOfSight || CheckLineOfSightForPosition(enemy.transform.position, viewWidth, 40)))
+                {
+                    tempDist = Vector3.Distance(base.transform.position, enemy.transform.position);
+                    if (tempDist < mostOptimalDistance)
+                    {
+                        mostOptimalDistance = tempDist;
+                        targetEnemy = enemy;
                     }
                 }
             }
-            if (PlayerControllerBPatch.playerFrozen)
+            if (targetEnemy != null && bufferDistance > 0f && previousTarget != null && Mathf.Abs(mostOptimalDistance - Vector3.Distance(base.transform.position, previousTarget.transform.position)) < bufferDistance)
             {
-                targetPlayer = localPlayer;
-            }*/
-
-
-            return targetPlayer != null;
+                targetEnemy = previousTarget;
+            }
+            return targetEnemy != null;
         }
 
-        void MoveToPlayer()
+        void FollowTarget() // TODO: Test this
         {
-            if (targetPlayer == null)
+            if (targetPlayer != null)
             {
-                return;
-            }
-            if (Vector3.Distance(transform.position, targetPlayer.transform.position) <= 3f)
-            {
-                logger.LogDebug("Headbutt Attack");
-                StartCoroutine(HeadbuttAttack());
-                return;
-            }
+                if (Vector3.Distance(transform.position, targetPlayer.transform.position) < followingRange)
+                {
+                    agent.ResetPath();
+                    if (walking) { DoAnimationClientRpc("stopWalking"); walking = false; }
+                    return;
+                }
 
-            if (timeSinceNewRandPos > 1.5f)
-            {
-                timeSinceNewRandPos = 0;
-                Vector3 positionInFrontPlayer = (targetPlayer.transform.forward * 2.9f) + targetPlayer.transform.position;
-                SetDestinationToPosition(positionInFrontPlayer, checkForPath: false);
+                SetDestinationToPosition(targetPlayer.transform.position, false);
+                if (!walking) { DoAnimationClientRpc("startWalking"); walking = true; }
             }
+            else if (targetEnemy != null)
+            {
+                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < followingRange)
+                {
+                    agent.ResetPath();
+                    if (walking) { DoAnimationClientRpc("stopWalking"); walking = false; }
+                    return;
+                }
+
+                SetDestinationToPosition(targetPlayer.transform.position, false);
+                if (!walking) { DoAnimationClientRpc("startWalking"); walking = true; }
+            }
+        }
+
+        void MoveToHealTarget() // TODO: Test this
+        {
+            if (targetPlayer != null)
+            {
+                if (targetPlayer.health >= 100)
+                {
+                    SwitchToBehaviourClientRpc((int)State.Following);
+                    if (hugging) { DoAnimationClientRpc("stopHugging"); hugging = false; }
+                    return;
+                }
+                if (Vector3.Distance(transform.position, targetPlayer.transform.position) < 0.5f)
+                {
+                    agent.ResetPath();
+                    if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
+                    return;
+                }
+
+                SetDestinationToPosition(targetPlayer.transform.position, false);
+            }
+            else if (targetEnemy != null)
+            {
+                int maxHealth = GetEnemyMaxHealth(targetEnemy.enemyType.enemyName);
+
+                if (targetEnemy.enemyHP >= maxHealth)
+                {
+                    SwitchToBehaviourClientRpc((int)State.Following);
+                    if (hugging) { DoAnimationClientRpc("stopHugging"); hugging = false; }
+                    return;
+                }
+                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < 0.5f)
+                {
+                    agent.ResetPath();
+                    if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
+                    return;
+                }
+
+                SetDestinationToPosition(targetEnemy.transform.position, false);
+            }
+        }
+
+        public bool MoveToSweetsIfDroppedByPlayer() // TODO: Test this
+        {
+            foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            {
+                if (Vector3.Distance(transform.position, item.transform.position) < followingRange)
+                {
+                    if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld)
+                    {
+                        SetDestinationToPosition(item.transform.position, false);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public void EatSweetsIfClose() // TODO: Test this
+        {
+            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            {
+                if (Vector3.Distance(transform.position, item.transform.position) < 1f)
+                {
+                    if (Sweets.Contains(item.itemProperties.itemName))
+                    {
+                        if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(0.5f); }
+                        if (item.itemProperties.itemName == "SCP-999") { MakeHyper(60f); }
+
+                        candyEaten += 1;
+                        healingBuffTime += 30f;
+
+                        if (candyEaten >= maxCandy) { MakeHyper(30f); }
+
+                        item.itemProperties.spawnPrefab.GetComponent<NetworkObject>().Despawn(true);
+                        Destroy(item.gameObject);
+                    }
+                }
+            }
+        }
+
+        public void MakeHyper(float duration) // TODO: Test this
+        {
+            hyperTime += duration;
+            DoAnimationClientRpc("startHyperDancing");
+            SwitchToBehaviourClientRpc((int)State.Hyper);
+        }
+
+        public override void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot = 0, int noiseID = 0)
+        {
+            base.DetectNoise(noisePosition, noiseLoudness, timesPlayedInOneSpot, noiseID);
         }
 
         public override void OnCollideWithPlayer(Collider other)
         {
-            if (!(timeSinceHittingPlayer < 0.5f))
+            base.OnCollideWithPlayer(other);
+            logger.LogDebug("Collided with player");
+
+            if (timeSinceHealing > 1f)
             {
-                PlayerControllerB playerControllerB = MeetsStandardPlayerCollisionConditions(other);
-                if (playerControllerB != null)
+                PlayerControllerB player = MeetsStandardPlayerCollisionConditions(other);
+                player.JumpToFearLevel(0f, false); // TODO: Test this
+                if (player != null && player.health < 100)
                 {
-                    timeSinceHittingPlayer = 0f;
-                    playerControllerB.DamagePlayer(10, hasDamageSFX: true, callRPC: true, CauseOfDeath.Stabbing);
-                    //HitPlayerServerRpc();
+                    timeSinceHealing = 0f;
+                    logger.LogDebug("Healing player: " + player.playerUsername);
+                    HealPlayerClientRpc(player.actualClientId);
                 }
             }
 
             return;
         }
 
-        public override void HitFromExplosion(float distance)
+        public override void OnCollideWithEnemy(Collider other, EnemyAI collidedEnemy = null) // TODO: Test this
         {
-            base.HitFromExplosion(distance);
-            KillEnemy(true);
+            logger.LogDebug("Collided with enemy"); // TODO: Make sure this works
+            logger.LogDebug("Collided with " + collidedEnemy.enemyType.enemyName);
+            base.OnCollideWithEnemy(other, collidedEnemy);
+
+            if (timeSinceHealing > 1f)
+            {
+                if (collidedEnemy != null) // TODO: Test this more
+                {
+                    timeSinceHealing = 0f;
+
+                    SpawnableEnemyWithRarity enemy = RoundManager.Instance.currentLevel.Enemies.Where(x => x.enemyType.enemyName == collidedEnemy.enemyType.enemyName).FirstOrDefault();
+                    if (enemy == null) { logger.LogDebug("Enemy not found: " + collidedEnemy.enemyType.enemyName); return; }
+
+                    int maxHealth = enemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+
+                    if (collidedEnemy.enemyHP < maxHealth)
+                    {
+                        logger.LogDebug("Healing enemy: " + collidedEnemy.enemyType.enemyName);
+                        collidedEnemy.enemyHP += 1;
+                    }
+                }
+                else { logger.LogError("Collided enemy is null"); }
+            }
+
+            return;
         }
 
         public override void HitEnemy(int force = 0, PlayerControllerB playerWhoHit = null, bool playHitSFX = true, int hitID = -1)
@@ -229,36 +374,26 @@ namespace SCP999
             base.HitEnemy(0, playerWhoHit, playHitSFX, hitID);
         }
 
-        public void Teleport(Vector3 teleportPos)
-        {
-            serverPosition = teleportPos;
-            transform.position = teleportPos;
-            agent.Warp(teleportPos);
-            SyncPositionToClients();
-        }
-
-        public bool IsAnyPlayerLookingAtMe()
+        public bool IsNearbyPlayerEmoting(float distance) // TODO: Test this // TODO: Implement this
         {
             foreach (PlayerControllerB player in StartOfRound.Instance.allPlayerScripts)
             {
-                if (player.isPlayerControlled && player.HasLineOfSightToPosition(transform.position, 45f, 60, config956SpawnRadius.Value))
-                {
-                    return true;
-                }
+                if (Vector3.Distance(transform.position, player.transform.position) < distance && player.performingEmote) { return true; }
             }
             return false;
         }
 
-        // RPC's
-
-        [ServerRpc(RequireOwnership = false)]
-        private void TargetPlayerServerRpc(ulong clientId)
+        public static int GetEnemyMaxHealth(string enemyName) // TODO: Test this
         {
-            /*if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+            foreach (EnemyAI enemy in Resources.FindObjectsOfTypeAll<EnemyAI>())
             {
-                
-            }*/
+                logger.LogDebug(enemy.enemyType.enemyName + ": " + enemy.enemyHP);
+                if (enemy.enemyType.enemyName == enemyName) { return enemy.enemyHP; }
+            }
+            return -1;
         }
+
+        // RPC's
 
         [ClientRpc]
         private void DoAnimationClientRpc(string animationName)
@@ -268,16 +403,77 @@ namespace SCP999
         }
 
         [ClientRpc]
-        private void DamageTargetPlayerClientRpc(ulong clientId)
+        private void HealPlayerClientRpc(ulong clientId)
         {
             PlayerControllerB player = StartOfRound.Instance.localPlayerController;
             if (player.actualClientId == clientId)
             {
-                player.DamagePlayer(configHeadbuttDamage.Value);
+                int newHealthAmount;
+                if (healingBuffTime > 0f) { newHealthAmount = player.health + playerHealAmount * 2; }
+                else { newHealthAmount = player.health + playerHealAmount; }
 
-                if (player.isPlayerDead) { PlayerControllerBPatch.playerFrozen = false; }
+                if (newHealthAmount > 100) { player.health = 100; }
+                else { player.health = newHealthAmount; }
+                HUDManager.Instance.UpdateHealthUI(newHealthAmount, false);
             }
+        }
+        
+        [ClientRpc]
+        private void HealEnemyClientRpc(int spawnedEnemyIndex) // TODO: may be unneeded
+        {
+            if (spawnedEnemyIndex < RoundManager.Instance.SpawnedEnemies.Count)
+            {
+                EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
+
+
+                // TODO: Continue
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void EnemyTookDamageServerRpc(int spawnedEnemyIndex, float health, float maxHealth)
+        {
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            {
+                targetEnemy = null;
+                targetPlayer = null;
+
+                float multiplier = 2 - (health / maxHealth);
+                float range = enemyDetectionRange * multiplier;
+
+                EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
+                if (Vector3.Distance(transform.position, enemy.transform.position) < range)
+                {
+                    targetEnemy = enemy;
+                    SwitchToBehaviourClientRpc((int)State.Healing);
+                }
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void PlayerTookDamageServerRpc(ulong clientId, float health, float maxHealth)
+        {
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            {
+                targetEnemy = null;
+                targetPlayer = null;
+
+                float multiplier = 2 - (health / maxHealth);
+                float range = playerDetectionRange * multiplier;
+
+                PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
+                if (Vector3.Distance(transform.position, player.transform.position) < range)
+                {
+                    targetPlayer = player;
+                    SwitchToBehaviourClientRpc((int)State.Healing);
+                }
+            }
+        }
+
+        [ClientRpc]
+        private void ChangeSizeClientRpc(float size) // TODO: Test this
+        {
+            transform.localScale = new Vector3(size, size, size);
         }
     }
 }
-// TODO: Death animation

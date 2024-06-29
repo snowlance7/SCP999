@@ -33,7 +33,7 @@ namespace SCP999
 
         public static AssetBundle? ModAssets;
 
-        public static AudioClip? WarningSoundShortsfx;
+        //public static AudioClip? WarningSoundShortsfx;
 
         // SCP-999 Rarity Configs
         public static ConfigEntry<int> configExperimentationLevelRarity;
@@ -46,6 +46,17 @@ namespace SCP999
         public static ConfigEntry<int> configTitanLevelRarity;
         public static ConfigEntry<int> configModdedLevelRarity;
         public static ConfigEntry<int> configOtherLevelRarity;
+
+        // SCP-999 General Configs
+        public static ConfigEntry<int> configPlayerHealAmount;
+        public static ConfigEntry<int> configEnemyHealAmount;
+
+        public static ConfigEntry<float> configPlayerDetectionRange;
+        public static ConfigEntry<float> configEnemyDetectionRange;
+
+        public static ConfigEntry<float> configFollowRange;
+
+        public static List<string> Sweets = new List<string> { "Blue Candy", "Green Candy", "Pink Candy", "Purple Candy", "Rainbow Candy", "Red Candy", "Yellow Candy", "Black Candy", "Candy", "Cake", "SCP-559" };
 
         private void Awake()
         {
@@ -63,16 +74,26 @@ namespace SCP999
             // Configs
 
             // Rarity
-            configExperimentationLevelRarity = Config.Bind("Rarity", "ExperimentationLevelRarity", 10, "Experimentation Level Rarity");
-            configAssuranceLevelRarity = Config.Bind("Rarity", "AssuranceLevelRarity", 10, "Assurance Level Rarity");
-            configVowLevelRarity = Config.Bind("Rarity", "VowLevelRarity", 10, "Vow Level Rarity");
+            configExperimentationLevelRarity = Config.Bind("Rarity", "ExperimentationLevelRarity", 50, "Experimentation Level Rarity");
+            configAssuranceLevelRarity = Config.Bind("Rarity", "AssuranceLevelRarity", 50, "Assurance Level Rarity");
+            configVowLevelRarity = Config.Bind("Rarity", "VowLevelRarity", 50, "Vow Level Rarity");
             configOffenseLevelRarity = Config.Bind("Rarity", "OffenseLevelRarity", 30, "Offense Level Rarity");
-            configMarchLevelRarity = Config.Bind("Rarity", "MarchLevelRarity", 50, "March Level Rarity");
-            configRendLevelRarity = Config.Bind("Rarity", "RendLevelRarity", 50, "Rend Level Rarity");
-            configDineLevelRarity = Config.Bind("Rarity", "DineLevelRarity", 50, "Dine Level Rarity");
-            configTitanLevelRarity = Config.Bind("Rarity", "TitanLevelRarity", 80, "Titan Level Rarity");
-            configModdedLevelRarity = Config.Bind("Rarity", "ModdedLevelRarity", 30, "Modded Level Rarity");
-            configOtherLevelRarity = Config.Bind("Rarity", "OtherLevelRarity", 30, "Other Level Rarity");
+            configMarchLevelRarity = Config.Bind("Rarity", "MarchLevelRarity", 30, "March Level Rarity");
+            configRendLevelRarity = Config.Bind("Rarity", "RendLevelRarity", 10, "Rend Level Rarity");
+            configDineLevelRarity = Config.Bind("Rarity", "DineLevelRarity", 10, "Dine Level Rarity");
+            configTitanLevelRarity = Config.Bind("Rarity", "TitanLevelRarity", 20, "Titan Level Rarity");
+            configModdedLevelRarity = Config.Bind("Rarity", "ModdedLevelRarity", 10, "Modded Level Rarity");
+            configOtherLevelRarity = Config.Bind("Rarity", "OtherLevelRarity", 10, "Other Level Rarity");
+
+            // General
+            configPlayerHealAmount = Config.Bind("General", "Player Heal Amount", 10, "How much SCP-999 heals the player per second");
+            configEnemyHealAmount = Config.Bind("General", "Enemy Heal Amount", 1, "How much SCP-999 heals the enemy per second");
+
+            configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 30f, "How far SCP-999 can detect you");
+            configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 20f, "How far SCP-999 can detect enemies");
+
+            configFollowRange = Config.Bind("General", "Follow Range", 10f, "How far SCP-999 can follow you or other enemies");
+        
 
             // Loading Assets
             string sAssemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -89,11 +110,11 @@ namespace SCP999
             //WarningSoundShortsfx = ModAssets.LoadAsset<AudioClip>("Assets/ModAssets/Tickler/Audio/gurgle.mp3");
             //LoggerInstance.LogDebug($"Got sounds from assets");
 
-            EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/Tickler/Tickler.asset");
+            EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/Tickler.asset");
             if (Tickler == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }
             LoggerInstance.LogDebug($"Got SCP-999 prefab");
-            TerminalNode TicklerTN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/Tickler/Bestiary/TicklerTN.asset");
-            TerminalKeyword TicklerTK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/Tickler/Bestiary/TicklerTK.asset");
+            TerminalNode TicklerTN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/TicklerTN.asset");
+            TerminalKeyword TicklerTK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/TicklerTK.asset");
 
             LoggerInstance.LogDebug("Setting rarities");
             var SCP999LevelRarities = new Dictionary<Levels.LevelTypes, int> {
