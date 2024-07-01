@@ -33,6 +33,8 @@ namespace SCP999.Patches
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), "PingScan_performed")]
         public static void PingScan_performedPostFix()
         {
+            RoundManager.Instance.RefreshEnemiesList();
+
             //List<SCP999AI> scp = RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>().ToList(); // TODO: This works
             //logger.LogDebug("Found: " + scp.Count);
 

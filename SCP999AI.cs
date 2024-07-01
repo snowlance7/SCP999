@@ -46,7 +46,7 @@ namespace SCP999
         bool hugging = false;
         bool dancing = false;
 
-        int maxCandy = 3;
+        const int maxCandy = 3;
         int candyEaten;
 
         enum State
@@ -79,8 +79,9 @@ namespace SCP999
             currentBehaviourStateIndex = (int)State.Roaming;
             RoundManager.Instance.SpawnedEnemies.Add(this);
 
-            //StartSearch(transform.position);
-            //agent.obstacleAvoidanceType = UnityEngine.AI.ObstacleAvoidanceType.NoObstacleAvoidance; // TODO: Use this if enemy still collides with other enemies
+            agent.obstacleAvoidanceType = UnityEngine.AI.ObstacleAvoidanceType.NoObstacleAvoidance; // TODO: Use this if enemy still collides with other enemies
+
+            StartSearch(transform.position);
         }
 
         public override void Update()
@@ -92,7 +93,11 @@ namespace SCP999
             if (healingBuffTime > 0f)
             {
                 healingBuffTime -= Time.deltaTime;
-                candyEaten = 0;
+
+                if (healingBuffTime <= 0f)
+                {
+                    candyEaten = 0;
+                }
             }
 
             if (hyperTime > 0f)
@@ -109,7 +114,7 @@ namespace SCP999
             }
         }
 
-        public override void DoAIInterval()
+        public override void DoAIInterval() // TODO: Test this
         {
             base.DoAIInterval();
 
@@ -158,9 +163,9 @@ namespace SCP999
                     if (hyperTime <= 0f)
                     {
                         candyEaten = 0;
-                        DoAnimationClientRpc("stopDancing");
+                        DoAnimationClientRpc("startWalking");
                         SwitchToBehaviourClientRpc((int)State.Roaming);
-                        StartSearch(transform.position);
+                        return;
                     }
                     break;
 
@@ -170,14 +175,14 @@ namespace SCP999
             }
         }
 
-        public bool TargetClosestEntity()
+        public bool TargetClosestEntity() // TODO: Test this
         {
             if (targetPlayer != null && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange / 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
             else if (targetEnemy != null && TargetClosestEnemy() && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange / 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
             else { return false; }
         }
 
-        public bool TargetClosestEnemy(float bufferDistance = 1.5f, bool requireLineOfSight = false, float viewWidth = 70f)
+        public bool TargetClosestEnemy(float bufferDistance = 1.5f, bool requireLineOfSight = false, float viewWidth = 70f) // TODO: Test this
         {
             mostOptimalDistance = 2000f;
             EnemyAI previousTarget = targetEnemy;
@@ -186,7 +191,7 @@ namespace SCP999
             {
                 if (!PathIsIntersectedByLineOfSight(enemy.transform.position, calculatePathDistance: false, avoidLineOfSight: false) && (!requireLineOfSight || CheckLineOfSightForPosition(enemy.transform.position, viewWidth, 40)))
                 {
-                    tempDist = Vector3.Distance(base.transform.position, enemy.transform.position);
+                    tempDist = Vector3.Distance(transform.position, enemy.transform.position);
                     if (tempDist < mostOptimalDistance)
                     {
                         mostOptimalDistance = tempDist;
@@ -194,7 +199,7 @@ namespace SCP999
                     }
                 }
             }
-            if (targetEnemy != null && bufferDistance > 0f && previousTarget != null && Mathf.Abs(mostOptimalDistance - Vector3.Distance(base.transform.position, previousTarget.transform.position)) < bufferDistance)
+            if (targetEnemy != null && bufferDistance > 0f && previousTarget != null && Mathf.Abs(mostOptimalDistance - Vector3.Distance(transform.position, previousTarget.transform.position)) < bufferDistance)
             {
                 targetEnemy = previousTarget;
             }
@@ -203,29 +208,44 @@ namespace SCP999
 
         void FollowTarget() // TODO: Test this
         {
-            if (targetPlayer != null)
-            {
-                if (Vector3.Distance(transform.position, targetPlayer.transform.position) < followingRange)
-                {
-                    agent.ResetPath();
-                    if (walking) { DoAnimationClientRpc("stopWalking"); walking = false; }
-                    return;
-                }
+            Vector3 pos;
 
-                SetDestinationToPosition(targetPlayer.transform.position, false);
-                if (!walking) { DoAnimationClientRpc("startWalking"); walking = true; }
+            if (targetEnemy != null)
+            {
+                pos = targetEnemy.transform.position;
             }
-            else if (targetEnemy != null)
+            else if (targetPlayer != null)
             {
-                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < followingRange)
+                pos = targetPlayer.transform.position;
+            }
+            else { return; }
+
+            if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range // TODO: Test this
+            {
+                if (!dancing && IsNearbyPlayerEmoting(followingRange) && !walking)
                 {
-                    agent.ResetPath();
-                    if (walking) { DoAnimationClientRpc("stopWalking"); walking = false; }
-                    return;
+                    DoAnimationClientRpc("startDancing");
+                    dancing = true;
                 }
 
-                SetDestinationToPosition(targetPlayer.transform.position, false);
-                if (!walking) { DoAnimationClientRpc("startWalking"); walking = true; }
+                if (walking)
+                {
+                    agent.ResetPath();
+                    DoAnimationClientRpc("stopWalking");
+                    walking = false;
+                    dancing = false;
+                }
+            }
+            else // Not within following range
+            {
+                SetDestinationToPosition(pos, false);
+                dancing = false;
+
+                if (!walking)
+                {
+                    DoAnimationClientRpc("startWalking");
+                    walking = true;
+                }
             }
         }
 
@@ -285,9 +305,9 @@ namespace SCP999
             return false;
         }
 
-        public void EatSweetsIfClose() // TODO: Test this
+        public void EatSweetsIfClose()
         {
-            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>()) // TODO: Make this more efficient
             {
                 if (Vector3.Distance(transform.position, item.transform.position) < 1f)
                 {
@@ -297,7 +317,8 @@ namespace SCP999
                         if (item.itemProperties.itemName == "SCP-999") { MakeHyper(60f); }
 
                         candyEaten += 1;
-                        healingBuffTime += 30f;
+                        healingBuffTime += 20f;
+                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
                         if (candyEaten >= maxCandy) { MakeHyper(30f); }
 
@@ -313,6 +334,7 @@ namespace SCP999
             hyperTime += duration;
             DoAnimationClientRpc("startHyperDancing");
             SwitchToBehaviourClientRpc((int)State.Hyper);
+            StartSearch(transform.position);
         }
 
         public override void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot = 0, int noiseID = 0)
@@ -328,10 +350,11 @@ namespace SCP999
             if (timeSinceHealing > 1f)
             {
                 PlayerControllerB player = MeetsStandardPlayerCollisionConditions(other);
-                player.JumpToFearLevel(0f, false); // TODO: Test this
+
                 if (player != null && player.health < 100)
                 {
                     timeSinceHealing = 0f;
+                    player.JumpToFearLevel(0f, false); // TODO: Test this
                     logger.LogDebug("Healing player: " + player.playerUsername);
                     HealPlayerClientRpc(player.actualClientId);
                 }
