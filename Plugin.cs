@@ -110,11 +110,11 @@ namespace SCP999
             //WarningSoundShortsfx = ModAssets.LoadAsset<AudioClip>("Assets/ModAssets/Tickler/Audio/gurgle.mp3");
             //LoggerInstance.LogDebug($"Got sounds from assets");
 
-            EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/Tickler.asset");
+            EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/TickleMonster.asset");
             if (Tickler == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }
             LoggerInstance.LogDebug($"Got SCP-999 prefab");
-            TerminalNode TicklerTN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/TicklerTN.asset");
-            TerminalKeyword TicklerTK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/TicklerTK.asset");
+            TerminalNode TicklerTN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/TickleMonsterTN.asset");
+            TerminalKeyword TicklerTK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/TickleMonsterTK.asset");
 
             LoggerInstance.LogDebug("Setting rarities");
             var SCP999LevelRarities = new Dictionary<Levels.LevelTypes, int> {

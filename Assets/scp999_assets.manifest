@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 212404717
+CRC: 3832409585
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 6aaf261b9c5883b271f78bf62862a9ae
+    Hash: 44584671e3f0924beb89ab6b46c471c7
   TypeTreeHash:
     serializedVersion: 2
     Hash: 03d401890a005787a1a566ae96da3275
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 6aaf261b9c5883b271f78bf62862a9ae
+    Hash: 44584671e3f0924beb89ab6b46c471c7
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -78,7 +78,7 @@ SerializeReferenceClassIdentifiers:
 - AssemblyName: Assembly-CSharp
   ClassName: NavSizeLimit
 Assets:
-- Assets/ModAssets/SCP999/Tickler.asset
-- Assets/ModAssets/SCP999/Bestiary/TicklerTK.asset
-- Assets/ModAssets/SCP999/Bestiary/TicklerTN.asset
+- Assets/ModAssets/SCP999/TickleMonster.asset
+- Assets/ModAssets/SCP999/Bestiary/TickleMonsterTK.asset
+- Assets/ModAssets/SCP999/Bestiary/TickleMonsterTN.asset
 Dependencies: []
