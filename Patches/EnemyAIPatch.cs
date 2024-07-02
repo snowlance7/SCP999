@@ -15,21 +15,21 @@ using Unity.Services.Authentication;
 
 namespace SCP999.Patches
 {
-    [HarmonyPatch(typeof(PlayerControllerB))]
-    internal class PlayerControllerBPatch
+    [HarmonyPatch(typeof(EnemyAI))]
+    internal class EnemyAIPatch
     {
         private static ManualLogSource logger = LoggerInstance;
 
         private static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
 
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]
-        private static void DamagePlayerPostfix(PlayerControllerB __instance)
+        [HarmonyPatch(nameof(EnemyAI.HitEnemy))]
+        private static void HitEnemyPostfix(EnemyAI __instance)
         {
             //List<SCP999AI> scp = RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>().ToList();
             foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
             {
-                scp.PlayerTookDamageServerRpc(localPlayer.actualClientId);
+                scp.EnemyTookDamageServerRpc(__instance.thisEnemyIndex);
             }
 
         }

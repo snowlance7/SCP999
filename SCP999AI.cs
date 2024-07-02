@@ -45,6 +45,7 @@ namespace SCP999
         float enemyDetectionRange;
         float rangeMultiplier = 1f;
         float followingRange;
+        float huggingRange = 5f;
 
         bool walking = false;
         bool hugging = false;
@@ -107,19 +108,19 @@ namespace SCP999
                 hyperTime -= Time.deltaTime;
             }
 
-            var state = currentBehaviourStateIndex;
-
             if (targetPlayer != null)
             {
                 turnCompass.LookAt(targetPlayer.gameplayCamera.transform.position);
                 transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(new Vector3(0f, turnCompass.eulerAngles.y, 0f)), 10f * Time.deltaTime);
             }
 
-            if (state != (int)State.Hyper)
+            var state = currentBehaviourStateIndex;
+
+            if (state != (int)State.Hyper && state != (int)State.Healing)
             {
                 if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
                 {
-                    if (walking && !hugging && !dancing)
+                    if (walking)
                     {
                         walking = false;
                         DoAnimationClientRpc("stopWalking");
@@ -127,7 +128,7 @@ namespace SCP999
                 }
                 else
                 {
-                    if (!walking && !hugging && !dancing)
+                    if (!walking)
                     {
                         walking = true;
                         DoAnimationClientRpc("startWalking");
@@ -149,21 +150,19 @@ namespace SCP999
             {
                 case (int)State.Roaming:
                     agent.speed = 5f;
-                    agent.stoppingDistance = 0;
-                    hugging = false;
+                    agent.stoppingDistance = 0f;
                     dancing = false;
-                    if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
+                    /*if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
                     {
                         StopSearch(currentSearch);
                         SwitchToBehaviourClientRpc((int)State.Following);
                         break;
-                    }
+                    }*/
                     break;
 
                 case (int)State.Following:
                     if (healingBuffTime > 0f) { agent.speed = 10f; } else { agent.speed = 5f; }
                     agent.stoppingDistance = followingRange;
-                    hugging = false;
                     // Keep targeting closest player, unless they are over playerDetectionRange units away and we can't see them.
                     if (!TargetClosestEntity())
                     {
@@ -182,15 +181,14 @@ namespace SCP999
 
                 case (int)State.Healing:
                     agent.speed = 10f; // TODO: Test this
-                    agent.stoppingDistance = 0.5f;
-                    dancing = false;
+                    agent.stoppingDistance = huggingRange;
+                    if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
                     MoveToHealTarget();
                     break;
 
                 case (int)State.Hyper:
                     agent.speed = 20f;
-                    agent.stoppingDistance = 0;
-                    hugging = false;
+                    agent.stoppingDistance = 0f;
                     if (hyperTime <= 0f)
                     {
                         candyEaten = 0;
@@ -256,12 +254,12 @@ namespace SCP999
 
             if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range // TODO: Test this
             {
-                if (!dancing && IsNearbyPlayerEmoting(followingRange) && !walking && !hugging)
+                if (!dancing && IsNearbyPlayerEmoting(followingRange) && !walking)
                 {
                     DoAnimationClientRpc("startDancing");
                     dancing = true;
                 }
-                else if (dancing && !IsNearbyPlayerEmoting(followingRange) && !walking && !hugging)
+                else if (dancing && !IsNearbyPlayerEmoting(followingRange) && !walking)
                 {
                     DoAnimationClientRpc("stopWalking");
                     dancing = false;
@@ -278,16 +276,16 @@ namespace SCP999
         {
             if (targetPlayer != null)
             {
+                logger.LogDebug("Player hp: " + targetPlayer.health);
                 if (targetPlayer.health >= 100)
                 {
-                    if (hugging) { DoAnimationClientRpc("stopHugging"); hugging = false; }
+                    if (hugging) { hugging = false; DoAnimationClientRpc("stopHugging"); }
                     SwitchToBehaviourClientRpc((int)State.Following);
                     return;
                 }
-                if (Vector3.Distance(transform.position, targetPlayer.transform.position) <= 1f)
+                if (Vector3.Distance(transform.position, targetPlayer.transform.position) <= huggingRange)
                 {
-                    if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
-                    return;
+                    HealPlayer(targetPlayer);
                 }
 
                 SetDestinationToPosition(targetPlayer.transform.position, false);
@@ -295,17 +293,17 @@ namespace SCP999
             else if (targetEnemy != null)
             {
                 int maxHealth = targetEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+                logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
 
                 if (targetEnemy.enemyHP >= maxHealth)
                 {
                     SwitchToBehaviourClientRpc((int)State.Following);
-                    if (hugging) { DoAnimationClientRpc("stopHugging"); hugging = false; }
+                    if (hugging) { hugging = false; DoAnimationClientRpc("stopHugging"); }
                     return;
                 }
-                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < 1f)
+                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < huggingRange)
                 {
-                    if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
-                    return;
+                    HealEnemy(targetEnemy);
                 }
 
                 SetDestinationToPosition(targetEnemy.transform.position, false);
@@ -340,6 +338,7 @@ namespace SCP999
                         if (item.itemProperties.itemName == "SCP-999") { MakeHyper(60f); }
 
                         candyEaten += 1;
+                        logger.LogDebug("Candy eaten: " + candyEaten);
                         healingBuffTime += 20f;
                         if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
@@ -400,7 +399,7 @@ namespace SCP999
 
         public override void HitEnemy(int force = 0, PlayerControllerB playerWhoHit = null, bool playHitSFX = true, int hitID = -1)
         {
-            base.HitEnemy(0, playerWhoHit, playHitSFX, hitID);
+            return;
         }
 
         public bool IsNearbyPlayerEmoting(float distance) // TODO: Test this // TODO: Implement this
@@ -414,7 +413,7 @@ namespace SCP999
 
         public bool HealPlayer(PlayerControllerB playerToHeal)
         {
-            if (playerToHeal != null && playerToHeal.health < 100)
+            if (playerToHeal != null && playerToHeal.health < 100 && timeSinceHealing > 1f)
             {
                 logger.LogDebug("Healing player: " + playerToHeal.playerUsername);
                 HealPlayerClientRpc(playerToHeal.actualClientId);
@@ -431,7 +430,7 @@ namespace SCP999
 
             int maxHealth = spawnableEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
 
-            if (enemyToHeal.enemyHP < maxHealth)
+            if (enemyToHeal.enemyHP < maxHealth && timeSinceHealing > 1f)
             {
                 logger.LogDebug("Healing " + enemyToHeal.enemyType.enemyName + ": " + enemyToHeal.enemyHP);
                 logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
@@ -470,18 +469,6 @@ namespace SCP999
                 HUDManager.Instance.UpdateHealthUI(newHealthAmount, false);
             }
         }
-        
-        /*[ClientRpc]
-        private void HealEnemyClientRpc(int spawnedEnemyIndex) // TODO: may be unneeded
-        {
-            if (spawnedEnemyIndex < RoundManager.Instance.SpawnedEnemies.Count)
-            {
-                EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
-
-
-                // TODO: Continue
-            }
-        }*/
 
         [ServerRpc(RequireOwnership = false)]
         public void EnemyTookDamageServerRpc(int spawnedEnemyIndex) // TODO: Test this
@@ -491,15 +478,18 @@ namespace SCP999
 
                 EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
                 int maxHealth = enemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+                logger.LogDebug("Enemy took damage, hp: " + enemy.enemyHP + "/" + maxHealth); // TODO: Test this
 
                 float multiplier = 2 - (enemy.enemyHP / maxHealth);
                 float range = enemyDetectionRange * multiplier;
 
                 if (Vector3.Distance(transform.position, enemy.transform.position) <= range)
                 {
-                    targetPlayer = null;
+                    if (currentSearch != null) { StopSearch(currentSearch); }
+                    //targetPlayer = null;
                     targetEnemy = enemy;
                     SwitchToBehaviourClientRpc((int)State.Healing);
+                    DoAnimationClientRpc("startHugging");
                 }
             }
         }
@@ -516,7 +506,8 @@ namespace SCP999
 
                 if (Vector3.Distance(transform.position, player.transform.position) <= range)
                 {
-                    targetEnemy = null;
+                    if (currentSearch != null) { StopSearch(currentSearch); }
+                    //targetEnemy = null;
                     targetPlayer = player;
                     SwitchToBehaviourClientRpc((int)State.Healing);
                 }
@@ -530,3 +521,5 @@ namespace SCP999
         }
     }
 }
+// TODO: Make SCP999 Block turret fire
+// TODO: Make sure SCP999 Eats candy and healing buff and hyper works correctly

@@ -34,6 +34,12 @@ namespace SCP999.Patches
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), "PingScan_performed")]
         public static void PingScan_performedPostFix()
         {
+            RoundManager.Instance.RefreshEnemiesList();
+
+
+            localPlayer.DamagePlayer(50);
+            HUDManager.Instance.UpdateHealthUI(localPlayer.health);
+
             /*foreach (var enemy in Resources.FindObjectsOfTypeAll<EnemyAI>())
             {
                 //var type = enemy.enemyType.enemyPrefab.GetComponent<NavMeshAgent>().obstacleAvoidanceType;
