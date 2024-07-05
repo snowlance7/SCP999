@@ -20,18 +20,50 @@ namespace SCP999.Patches
     {
         private static ManualLogSource logger = LoggerInstance;
 
-        private static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
-
         [HarmonyPostfix]
         [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]
-        private static void DamagePlayerPostfix(PlayerControllerB __instance)
+        private static void DamagePlayerPostfix(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
         {
-            //List<SCP999AI> scp = RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>().ToList();
+            if (StartOfRound.Instance.inShipPhase) { return; }
+
+            PlayerControllerB player = __instance;
+
             foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
             {
-                scp.PlayerTookDamageServerRpc(localPlayer.actualClientId);
+                if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking) { continue; }
+
+                float multiplier = 2 - (player.health / 100f);
+                float range = scp.playerDetectionRange * multiplier;
+
+                if (Vector3.Distance(scp.transform.position, player.transform.position) <= range)
+                {
+                    scp.PlayerTookDamageServerRpc(player.actualClientId);
+                    return;
+                }
             }
 
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]
+        private static bool DamagePlayerPrefix(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
+        {
+            PlayerControllerB player = __instance;
+
+            if (causeOfDeath == CauseOfDeath.Gunshots)
+            {
+                foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+                {
+                    if (scp.targetPlayer != null)
+                    {
+                        if (player == scp.targetPlayer && scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
         }
     }
 }

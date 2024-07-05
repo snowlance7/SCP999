@@ -34,11 +34,11 @@ namespace SCP999.Patches
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), "PingScan_performed")]
         public static void PingScan_performedPostFix()
         {
-            RoundManager.Instance.RefreshEnemiesList();
+            //RoundManager.Instance.RefreshEnemiesList();
 
 
-            localPlayer.DamagePlayer(50);
-            HUDManager.Instance.UpdateHealthUI(localPlayer.health);
+            //localPlayer.DamagePlayer(50);
+            //HUDManager.Instance.UpdateHealthUI(localPlayer.health);
 
             /*foreach (var enemy in Resources.FindObjectsOfTypeAll<EnemyAI>())
             {

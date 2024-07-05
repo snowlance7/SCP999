@@ -89,10 +89,10 @@ namespace SCP999
             configPlayerHealAmount = Config.Bind("General", "Player Heal Amount", 10, "How much SCP-999 heals the player per second");
             configEnemyHealAmount = Config.Bind("General", "Enemy Heal Amount", 1, "How much SCP-999 heals the enemy per second");
 
-            configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 30f, "How far SCP-999 can detect you");
-            configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 20f, "How far SCP-999 can detect enemies");
+            configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 20f, "How far SCP-999 can detect you");
+            configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 10f, "How far SCP-999 can detect enemies");
 
-            configFollowRange = Config.Bind("General", "Follow Range", 10f, "How far SCP-999 can follow you or other enemies");
+            configFollowRange = Config.Bind("General", "Follow Range", 7f, "How far SCP-999 can follow you or other enemies");
         
 
             // Loading Assets

@@ -20,18 +20,27 @@ namespace SCP999.Patches
     {
         private static ManualLogSource logger = LoggerInstance;
 
-        private static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
-
         [HarmonyPostfix]
         [HarmonyPatch(nameof(EnemyAI.HitEnemy))]
         private static void HitEnemyPostfix(EnemyAI __instance)
         {
-            //List<SCP999AI> scp = RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>().ToList();
+            if (__instance.enemyType.enemyName == "SCP-999") { return; } // TODO: Get this working
+
+            int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+            float multiplier = 2 - (__instance.enemyHP / maxHealth);
+
             foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
             {
-                scp.EnemyTookDamageServerRpc(__instance.thisEnemyIndex);
-            }
+                logger.LogDebug("Enemy took damage, hp: " + __instance.enemyHP + "/" + maxHealth); // TODO: Not working, sometimes returns 1/1
 
+                float range = scp.enemyDetectionRange * multiplier;
+
+                if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
+                {
+                    scp.EnemyTookDamageServerRpc(__instance.thisEnemyIndex);
+                    return;
+                }
+            }
         }
     }
 }

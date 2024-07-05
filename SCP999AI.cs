@@ -38,11 +38,13 @@ namespace SCP999
         float healingBuffTime;
         float hyperTime;
 
+        public Turret blockedTurret;
+
         int playerHealAmount;
         int enemyHealAmount;
 
-        float playerDetectionRange;
-        float enemyDetectionRange;
+        public float playerDetectionRange;
+        public float enemyDetectionRange;
         float rangeMultiplier = 1f;
         float followingRange;
         float huggingRange = 5f;
@@ -54,10 +56,11 @@ namespace SCP999
         const int maxCandy = 3;
         int candyEaten;
 
-        enum State
+        public enum State
         {
             Roaming,
             Following,
+            Blocking,
             Healing,
             Hyper
         }
@@ -97,7 +100,7 @@ namespace SCP999
             {
                 healingBuffTime -= Time.deltaTime;
 
-                if (healingBuffTime <= 0f)
+                if (healingBuffTime <= 0.5f)
                 {
                     candyEaten = 0;
                 }
@@ -152,12 +155,12 @@ namespace SCP999
                     agent.speed = 5f;
                     agent.stoppingDistance = 0f;
                     dancing = false;
-                    /*if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
+                    if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
                     {
                         StopSearch(currentSearch);
                         SwitchToBehaviourClientRpc((int)State.Following);
                         break;
-                    }*/
+                    }
                     break;
 
                 case (int)State.Following:
@@ -174,13 +177,25 @@ namespace SCP999
                         return;
                     }
                     
-                    //if (MoveToSweetsIfDroppedByPlayer()) { EatSweetsIfClose(); return; } // TODO: Rework and test this if needed
+                    if (MoveToSweetsIfDroppedByPlayer()) { EatSweetsIfClose(); return; }
                     FollowTarget();
 
                     break;
 
+                case (int)State.Blocking:
+                    agent.speed = 20f;
+                    agent.stoppingDistance = 0f;
+                    if (!MoveInFrontOfTurret())
+                    {
+                        logger.LogDebug("Stop Blocking");
+                        blockedTurret = null;
+                        SwitchToBehaviourClientRpc((int)State.Following);
+                        return;
+                    }
+                    break;
+
                 case (int)State.Healing:
-                    agent.speed = 10f; // TODO: Test this
+                    agent.speed = 10f;
                     agent.stoppingDistance = huggingRange;
                     if (!hugging) { DoAnimationClientRpc("startHugging"); hugging = true; }
                     MoveToHealTarget();
@@ -237,7 +252,7 @@ namespace SCP999
             return targetEnemy != null;
         }
 
-        void FollowTarget() // TODO: Test this more
+        void FollowTarget()
         {
             Vector3 pos;
 
@@ -247,12 +262,11 @@ namespace SCP999
             }
             else if (targetEnemy != null)
             {
-                //logger.LogDebug("Targeting enemy: " + targetEnemy.enemyType.enemyName);
                 pos = targetEnemy.transform.position;
             }
             else { return; }
 
-            if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range // TODO: Test this
+            if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range
             {
                 if (!dancing && IsNearbyPlayerEmoting(followingRange) && !walking)
                 {
@@ -277,7 +291,7 @@ namespace SCP999
             if (targetPlayer != null)
             {
                 logger.LogDebug("Player hp: " + targetPlayer.health);
-                if (targetPlayer.health >= 100)
+                if (targetPlayer.health >= 100 || targetPlayer.isPlayerDead)
                 {
                     if (hugging) { hugging = false; DoAnimationClientRpc("stopHugging"); }
                     SwitchToBehaviourClientRpc((int)State.Following);
@@ -290,12 +304,12 @@ namespace SCP999
 
                 SetDestinationToPosition(targetPlayer.transform.position, false);
             }
-            else if (targetEnemy != null)
+            else if (targetEnemy != null) // TODO: Not working
             {
                 int maxHealth = targetEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
                 logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
 
-                if (targetEnemy.enemyHP >= maxHealth)
+                if (targetEnemy.enemyHP >= maxHealth || targetEnemy.isEnemyDead)
                 {
                     SwitchToBehaviourClientRpc((int)State.Following);
                     if (hugging) { hugging = false; DoAnimationClientRpc("stopHugging"); }
@@ -310,14 +324,30 @@ namespace SCP999
             }
         }
 
-        public bool MoveToSweetsIfDroppedByPlayer() // TODO: Rework this if needed
+        bool MoveInFrontOfTurret()
+        {
+            if (blockedTurret != null)
+            {
+                if (blockedTurret.turretMode == TurretMode.Firing || blockedTurret.turretMode == TurretMode.Charging)
+                {
+                    Vector3 interpolatedPosition = Vector3.Lerp(targetPlayer.transform.position, blockedTurret.transform.position, 0.5f);
+                    SetDestinationToPosition(interpolatedPosition, false);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool MoveToSweetsIfDroppedByPlayer()
         {
             foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
-                if (Vector3.Distance(transform.position, item.transform.position) < followingRange)
+                if (Vector3.Distance(transform.position, item.transform.position) <= followingRange)
                 {
-                    if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.isHeld)
+                    if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.heldByPlayerOnServer)
                     {
+                        logger.LogDebug("Moving to item: " + item.itemProperties.itemName);
+                        agent.stoppingDistance = 0f;
                         SetDestinationToPosition(item.transform.position, false);
                         return true;
                     }
@@ -328,36 +358,39 @@ namespace SCP999
 
         public void EatSweetsIfClose() // TODO: Rework this if needed
         {
-            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>()) // TODO: Make this more efficient
+            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
                 if (Vector3.Distance(transform.position, item.transform.position) < 1f)
                 {
                     if (Sweets.Contains(item.itemProperties.itemName))
                     {
-                        if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(0.5f); }
-                        if (item.itemProperties.itemName == "SCP-999") { MakeHyper(60f); }
+                        logger.LogDebug("Eating item: " + item.itemProperties.itemName);
+                        if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(0.5f); } // TODO: Test this
+                        if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); } // TODO: Test this
+                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; } // TODO: Test this
+
+                        item.GetComponent<NetworkObject>().Despawn(true);
+                        Destroy(item.gameObject);
 
                         candyEaten += 1;
                         logger.LogDebug("Candy eaten: " + candyEaten);
                         healingBuffTime += 20f;
-                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
                         if (candyEaten >= maxCandy) { MakeHyper(30f); }
-
-                        item.itemProperties.spawnPrefab.GetComponent<NetworkObject>().Despawn(true);
-                        Destroy(item.gameObject);
                     }
                 }
             }
         }
 
-        public void MakeHyper(float duration) // TODO: Rework this if needed
+        public void MakeHyper(float duration)
         {
             hyperTime += duration;
             SwitchToBehaviourClientRpc((int)State.Hyper);
             DoAnimationClientRpc("startHyperDancing");
             dancing = true;
             StartSearch(transform.position);
+            targetPlayer = null;
+            targetEnemy = null;
         }
 
         public override void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot = 0, int noiseID = 0)
@@ -368,7 +401,7 @@ namespace SCP999
         public override void OnCollideWithPlayer(Collider other)
         {
             base.OnCollideWithPlayer(other);
-            logger.LogDebug("Collided with player");
+            //logger.LogDebug("Collided with player");
 
             if (timeSinceHealing > 1f)
             {
@@ -380,14 +413,13 @@ namespace SCP999
             return;
         }
 
-        public override void OnCollideWithEnemy(Collider other, EnemyAI collidedEnemy = null) // TODO: Test this
+        public override void OnCollideWithEnemy(Collider other, EnemyAI collidedEnemy = null)
         {
-            //logger.LogDebug("Collided with " + collidedEnemy.enemyType.enemyName);
             base.OnCollideWithEnemy(other, collidedEnemy);
 
             if (timeSinceHealing > 1f)
             {
-                if (collidedEnemy != null) // TODO: Test this more
+                if (collidedEnemy != null)
                 {
                     HealEnemy(collidedEnemy);
                 }
@@ -402,7 +434,7 @@ namespace SCP999
             return;
         }
 
-        public bool IsNearbyPlayerEmoting(float distance) // TODO: Test this // TODO: Implement this
+        public bool IsNearbyPlayerEmoting(float distance)
         {
             foreach (PlayerControllerB player in StartOfRound.Instance.allPlayerScripts)
             {
@@ -432,8 +464,8 @@ namespace SCP999
 
             if (enemyToHeal.enemyHP < maxHealth && timeSinceHealing > 1f)
             {
-                logger.LogDebug("Healing " + enemyToHeal.enemyType.enemyName + ": " + enemyToHeal.enemyHP);
-                logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
+                //logger.LogDebug("Healing " + enemyToHeal.enemyType.enemyName + ": " + enemyToHeal.enemyHP);
+                //logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
 
                 if (healingBuffTime > 0f) { enemyToHeal.enemyHP += enemyHealAmount * 2; }
                 else { enemyToHeal.enemyHP += enemyHealAmount; }
@@ -471,14 +503,14 @@ namespace SCP999
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void EnemyTookDamageServerRpc(int spawnedEnemyIndex) // TODO: Test this
+        public void EnemyTookDamageServerRpc(int spawnedEnemyIndex) // TODO: This isnt working properly, fix it
         {
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
-
+                if (hyperTime > 0f) { return; }
                 EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
                 int maxHealth = enemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-                logger.LogDebug("Enemy took damage, hp: " + enemy.enemyHP + "/" + maxHealth); // TODO: Test this
+                logger.LogDebug("Enemy took damage, hp: " + enemy.enemyHP + "/" + maxHealth); // TODO: This is returning 1/1 sometimes for some reason, or its the one in healenemy
 
                 float multiplier = 2 - (enemy.enemyHP / maxHealth);
                 float range = enemyDetectionRange * multiplier;
@@ -486,10 +518,9 @@ namespace SCP999
                 if (Vector3.Distance(transform.position, enemy.transform.position) <= range)
                 {
                     if (currentSearch != null) { StopSearch(currentSearch); }
-                    //targetPlayer = null;
+                    targetPlayer = null;
                     targetEnemy = enemy;
                     SwitchToBehaviourClientRpc((int)State.Healing);
-                    DoAnimationClientRpc("startHugging");
                 }
             }
         }
@@ -499,18 +530,13 @@ namespace SCP999
         {
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
+                if (hyperTime > 0f) { return; }
                 PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
 
-                float multiplier = 2 - (player.health / 100f);
-                float range = playerDetectionRange * multiplier;
-
-                if (Vector3.Distance(transform.position, player.transform.position) <= range)
-                {
-                    if (currentSearch != null) { StopSearch(currentSearch); }
-                    //targetEnemy = null;
-                    targetPlayer = player;
-                    SwitchToBehaviourClientRpc((int)State.Healing);
-                }
+                if (currentSearch != null) { StopSearch(currentSearch); }
+                targetEnemy = null;
+                targetPlayer = player;
+                SwitchToBehaviourClientRpc((int)State.Healing);
             }
         }
 
@@ -519,7 +545,24 @@ namespace SCP999
         {
             transform.localScale = new Vector3(size, size, size);
         }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void BlockTurretFireServerRpc()
+        {
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            {
+                Turret turretFiring;
+
+                foreach (Turret turret in UnityEngine.Object.FindObjectsOfType<Turret>())
+                {
+                    if (turret.targetPlayerWithRotation == targetPlayer)
+                    {
+                        blockedTurret = turret;
+                        SwitchToBehaviourClientRpc((int)State.Blocking);
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
-// TODO: Make SCP999 Block turret fire
-// TODO: Make sure SCP999 Eats candy and healing buff and hyper works correctly
