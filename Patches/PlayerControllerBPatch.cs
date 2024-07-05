@@ -1,17 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
-using UnityEngine;
+using System.Linq;
 using static SCP999.Plugin;
-using Unity.Netcode;
-using UnityEngine.InputSystem;
-using System.Collections;
-using SCP999;
-using Unity.Services.Authentication;
 
 namespace SCP999.Patches
 {
@@ -32,14 +23,8 @@ namespace SCP999.Patches
             {
                 if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking) { continue; }
 
-                float multiplier = 2 - (player.health / 100f);
-                float range = scp.playerDetectionRange * multiplier;
-
-                if (Vector3.Distance(scp.transform.position, player.transform.position) <= range)
-                {
-                    scp.PlayerTookDamageServerRpc(player.actualClientId);
-                    return;
-                }
+                scp.PlayerTookDamageServerRpc(player.actualClientId);
+                return;
             }
 
         }

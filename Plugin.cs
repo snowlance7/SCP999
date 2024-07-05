@@ -1,20 +1,13 @@
-using AmazingAssets.TerrainToMesh;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
 using LethalLib.Modules;
-using Steamworks.Data;
-using Steamworks.Ugc;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using Unity.Netcode;
-using Unity.Networking.Transport;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace SCP999
 {

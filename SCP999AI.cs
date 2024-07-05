@@ -1,25 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using GameNetcodeStuff;
-using LethalLib;
+using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using static SCP999.Plugin;
-using UnityEngine.UI;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using static Netcode.Transports.Facepunch.FacepunchTransport;
-//using SCP999.Patches;
-using System.Drawing;
-using Unity.Services.Authentication;
-using HarmonyLib;
-using ES3Types;
-using System.Reflection;
-using UnityEngine.AI;
-using System;
-using static LethalLib.Modules.Enemies;
 
 namespace SCP999
 {
@@ -119,22 +103,25 @@ namespace SCP999
 
             var state = currentBehaviourStateIndex;
 
-            if (state != (int)State.Hyper && state != (int)State.Healing)
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
-                if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
+                if (state != (int)State.Hyper && state != (int)State.Healing)
                 {
-                    if (walking)
+                    if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
                     {
-                        walking = false;
-                        DoAnimationClientRpc("stopWalking");
+                        if (walking)
+                        {
+                            walking = false;
+                            DoAnimationClientRpc("stopWalking");
+                        }
                     }
-                }
-                else
-                {
-                    if (!walking)
+                    else
                     {
-                        walking = true;
-                        DoAnimationClientRpc("startWalking");
+                        if (!walking)
+                        {
+                            walking = true;
+                            DoAnimationClientRpc("startWalking");
+                        }
                     }
                 }
             }
@@ -218,7 +205,7 @@ namespace SCP999
             }
         }
 
-        public bool TargetClosestEntity() // TODO: Test this, make sure its prioritizing players over enemies
+        public bool TargetClosestEntity()
         {
             if (targetPlayer != null && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
             else if (targetEnemy != null && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
@@ -286,7 +273,7 @@ namespace SCP999
             }
         }
 
-        void MoveToHealTarget() // TODO: Test this
+        void MoveToHealTarget()
         {
             if (targetPlayer != null)
             {
@@ -304,7 +291,7 @@ namespace SCP999
 
                 SetDestinationToPosition(targetPlayer.transform.position, false);
             }
-            else if (targetEnemy != null) // TODO: Not working
+            else if (targetEnemy != null)
             {
                 int maxHealth = targetEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
                 logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
@@ -356,7 +343,7 @@ namespace SCP999
             return false;
         }
 
-        public void EatSweetsIfClose() // TODO: Rework this if needed
+        public void EatSweetsIfClose()
         {
             foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
@@ -443,19 +430,26 @@ namespace SCP999
             return false;
         }
 
-        public bool HealPlayer(PlayerControllerB playerToHeal)
+        public bool HealPlayer(PlayerControllerB player)
         {
-            if (playerToHeal != null && playerToHeal.health < 100 && timeSinceHealing > 1f)
+            if (player != null && player.health < 100 && timeSinceHealing > 1f)
             {
-                logger.LogDebug("Healing player: " + playerToHeal.playerUsername);
-                HealPlayerClientRpc(playerToHeal.actualClientId);
+                logger.LogDebug("Healing player: " + player.playerUsername);
+
+                int newHealthAmount;
+                if (healingBuffTime > 0f) { newHealthAmount = player.health + (playerHealAmount * 2); }
+                else { newHealthAmount = player.health + playerHealAmount; }
+
+                if (newHealthAmount > 100) { newHealthAmount = 100; }
+
+                HealPlayerClientRpc(player.actualClientId, newHealthAmount);
                 timeSinceHealing = 0f;
                 return true;
             }
             return false;
         }
 
-        public bool HealEnemy(EnemyAI enemyToHeal) // TODO: Test this
+        public bool HealEnemy(EnemyAI enemyToHeal)
         {
             SpawnableEnemyWithRarity spawnableEnemy = RoundManager.Instance.currentLevel.Enemies.Where(x => x.enemyType.enemyName == enemyToHeal.enemyType.enemyName).FirstOrDefault();
             if (spawnableEnemy == null) { logger.LogError("Enemy not found: " + enemyToHeal.enemyType.enemyName); return false; }
@@ -464,11 +458,11 @@ namespace SCP999
 
             if (enemyToHeal.enemyHP < maxHealth && timeSinceHealing > 1f)
             {
-                //logger.LogDebug("Healing " + enemyToHeal.enemyType.enemyName + ": " + enemyToHeal.enemyHP);
-                //logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
 
                 if (healingBuffTime > 0f) { enemyToHeal.enemyHP += enemyHealAmount * 2; }
                 else { enemyToHeal.enemyHP += enemyHealAmount; }
+
+                logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
 
                 timeSinceHealing = 0f;
                 return true;
@@ -486,56 +480,47 @@ namespace SCP999
         }
 
         [ClientRpc]
-        private void HealPlayerClientRpc(ulong clientId)
+        private void HealPlayerClientRpc(ulong clientId, int newHealthAmount)
         {
-            PlayerControllerB player = StartOfRound.Instance.localPlayerController;
-            if (player.actualClientId == clientId)
-            {
-                player.JumpToFearLevel(0f, false); // TODO: Test this
-                int newHealthAmount;
-                if (healingBuffTime > 0f) { newHealthAmount = player.health + (playerHealAmount * 2); }
-                else { newHealthAmount = player.health + playerHealAmount; }
+            PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
+            if (player == null) { return; }
 
-                if (newHealthAmount > 100) { player.health = 100; }
-                else { player.health = newHealthAmount; }
-                HUDManager.Instance.UpdateHealthUI(newHealthAmount, false);
-            }
+            player.JumpToFearLevel(0f, false); // TODO: Test this
+
+            player.health = newHealthAmount;
+            HUDManager.Instance.UpdateHealthUI(newHealthAmount, false);
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void EnemyTookDamageServerRpc(int spawnedEnemyIndex) // TODO: This isnt working properly, fix it
+        public void PlayerTookDamageServerRpc(ulong clientId)
         {
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
-                if (hyperTime > 0f) { return; }
-                EnemyAI enemy = RoundManager.Instance.SpawnedEnemies[spawnedEnemyIndex];
-                int maxHealth = enemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-                logger.LogDebug("Enemy took damage, hp: " + enemy.enemyHP + "/" + maxHealth); // TODO: This is returning 1/1 sometimes for some reason, or its the one in healenemy
+                PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
+                if (player == null) { return; }
 
-                float multiplier = 2 - (enemy.enemyHP / maxHealth);
-                float range = enemyDetectionRange * multiplier;
+                float multiplier = 2 - (player.health / 100f);
+                float range = configPlayerDetectionRange.Value * multiplier;
 
-                if (Vector3.Distance(transform.position, enemy.transform.position) <= range)
+                if (Vector3.Distance(transform.position, player.transform.position) <= range)
                 {
+                    targetEnemy = null;
+                    targetPlayer = player;
+
+                    if (hyperTime > 0f) { return; }
                     if (currentSearch != null) { StopSearch(currentSearch); }
-                    targetPlayer = null;
-                    targetEnemy = enemy;
                     SwitchToBehaviourClientRpc((int)State.Healing);
                 }
             }
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void PlayerTookDamageServerRpc(ulong clientId) // TODO: Test this
+        public void EnemyTookDamageServerRpc()
         {
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
                 if (hyperTime > 0f) { return; }
-                PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
-
                 if (currentSearch != null) { StopSearch(currentSearch); }
-                targetEnemy = null;
-                targetPlayer = player;
                 SwitchToBehaviourClientRpc((int)State.Healing);
             }
         }

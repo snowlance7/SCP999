@@ -1,26 +1,7 @@
 ﻿using BepInEx.Logging;
-using HarmonyLib;
-using LethalLib.Extras;
-using LethalLib.Modules;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
-using static SCP999.Plugin;
-using LethalLib;
-using static LethalLib.Modules.Enemies;
-using Unity.Netcode;
 using GameNetcodeStuff;
-using static UnityEngine.ParticleSystem.PlaybackState;
-using Unity.Mathematics;
+using HarmonyLib;
 using UnityEngine;
-using UnityEngine.UIElements;
-using Unity.Burst.Intrinsics;
-using System.Collections;
-using static UnityEngine.VFX.VisualEffectControlTrackController;
-using UnityEngine.InputSystem.Utilities;
-using UnityEngine.AI;
 
 namespace SCP999.Patches
 {
@@ -31,7 +12,7 @@ namespace SCP999.Patches
 
         private static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
 
-        [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), "PingScan_performed")]
+        [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
             //RoundManager.Instance.RefreshEnemiesList();
@@ -63,7 +44,15 @@ namespace SCP999.Patches
 
             //logger.LogDebug(localPlayer.currentlyHeldObjectServer.itemProperties.itemName);
         }
-        public static List<SpawnableEnemyWithRarity> GetEnemies()
+
+        [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]
+        public static void SubmitChat_performedPrefix(HUDManager __instance)
+        {
+            //string msg = __instance.chatTextField.text;
+            //logger.LogDebug(msg);
+        }
+
+        /*public static List<SpawnableEnemyWithRarity> GetEnemies()
         {
             logger.LogDebug("Getting enemies");
             List<SpawnableEnemyWithRarity> enemies = new List<SpawnableEnemyWithRarity>();
@@ -77,8 +66,6 @@ namespace SCP999.Patches
 
             logger.LogDebug($"Enemy types: {enemies.Count}");
             return enemies;
-        }
+        }*/
     }
 }
-// test if this works
-// test if healing works

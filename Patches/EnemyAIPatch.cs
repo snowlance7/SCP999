@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using BepInEx.Logging;
-using GameNetcodeStuff;
+﻿using BepInEx.Logging;
 using HarmonyLib;
+using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using static SCP999.Plugin;
-using Unity.Netcode;
-using UnityEngine.InputSystem;
-using System.Collections;
-using SCP999;
-using Unity.Services.Authentication;
 
 namespace SCP999.Patches
 {
@@ -24,21 +16,26 @@ namespace SCP999.Patches
         [HarmonyPatch(nameof(EnemyAI.HitEnemy))]
         private static void HitEnemyPostfix(EnemyAI __instance)
         {
-            if (__instance.enemyType.enemyName == "SCP-999") { return; } // TODO: Get this working
-
-            int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-            float multiplier = 2 - (__instance.enemyHP / maxHealth);
-
-            foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
-                logger.LogDebug("Enemy took damage, hp: " + __instance.enemyHP + "/" + maxHealth); // TODO: Not working, sometimes returns 1/1
+                if (__instance.enemyType.enemyName == "SCP-999") { return; } // TODO: Get this working
 
-                float range = scp.enemyDetectionRange * multiplier;
+                int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
 
-                if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
+                float multiplier = 2 - (__instance.enemyHP / maxHealth);
+                float range = configEnemyDetectionRange.Value * multiplier;
+
+                foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
                 {
-                    scp.EnemyTookDamageServerRpc(__instance.thisEnemyIndex);
-                    return;
+                    logger.LogDebug(__instance.enemyType.enemyName + " took damage, hp: " + __instance.enemyHP + "/" + maxHealth);
+
+                    if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
+                    {
+                        scp.targetPlayer = null;
+                        scp.targetEnemy = __instance;
+                        scp.EnemyTookDamageServerRpc();
+                        return;
+                    }
                 }
             }
         }
