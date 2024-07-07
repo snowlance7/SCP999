@@ -26,8 +26,6 @@ namespace SCP999
 
         public static AssetBundle? ModAssets;
 
-        //public static AudioClip? WarningSoundShortsfx;
-
         // SCP-999 Rarity Configs
         public static ConfigEntry<int> configExperimentationLevelRarity;
         public static ConfigEntry<int> configAssuranceLevelRarity;
@@ -48,6 +46,8 @@ namespace SCP999
         public static ConfigEntry<float> configEnemyDetectionRange;
 
         public static ConfigEntry<float> configFollowRange;
+
+        public static ConfigEntry<int> configMaxCandy;
 
         public static List<string> Sweets = new List<string> { "Blue Candy", "Green Candy", "Pink Candy", "Purple Candy", "Rainbow Candy", "Red Candy", "Yellow Candy", "Black Candy", "Candy", "Cake", "SCP-559" };
 
@@ -86,6 +86,8 @@ namespace SCP999
             configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 10f, "How far SCP-999 can detect enemies");
 
             configFollowRange = Config.Bind("General", "Follow Range", 7f, "How far SCP-999 can follow you or other enemies");
+
+            configMaxCandy = Config.Bind("General", "Max Candy", 3, "Max amount of candy SCP-999 can eat before something bad happens");
         
 
             // Loading Assets
@@ -98,10 +100,6 @@ namespace SCP999
                 return;
             }
             LoggerInstance.LogDebug($"Got AssetBundle at: {Path.Combine(sAssemblyLocation, "scp999_assets")}");
-
-            // Getting Audio
-            //WarningSoundShortsfx = ModAssets.LoadAsset<AudioClip>("Assets/ModAssets/Tickler/Audio/gurgle.mp3");
-            //LoggerInstance.LogDebug($"Got sounds from assets");
 
             EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/TickleMonster.asset");
             if (Tickler == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }

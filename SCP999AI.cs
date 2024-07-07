@@ -1,5 +1,6 @@
 ﻿using BepInEx.Logging;
 using GameNetcodeStuff;
+using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
@@ -17,18 +18,19 @@ namespace SCP999
 #pragma warning restore 0649
 
         public EnemyAI targetEnemy;
+        Turret blockedTurret;
 
-        public float timeSinceHealing;
+        float timeSinceHealing;
         float healingBuffTime;
         float hyperTime;
-
-        public Turret blockedTurret;
+        float timeSinceBlockSFX;
+        float timeSinceHugSFX;
 
         int playerHealAmount;
         int enemyHealAmount;
 
-        public float playerDetectionRange;
-        public float enemyDetectionRange;
+        float playerDetectionRange;
+        float enemyDetectionRange;
         float rangeMultiplier = 1f;
         float followingRange;
         float huggingRange = 5f;
@@ -37,8 +39,17 @@ namespace SCP999
         bool hugging = false;
         bool dancing = false;
 
-        const int maxCandy = 3;
+        int maxCandy;
         int candyEaten;
+
+        public bool followPlayer = true;
+        public bool followEnemy = true;
+
+        public List<AudioClip> hitSFXList;
+        public List<AudioClip> hugSFXList;
+        public List<AudioClip> hurtSFXList;
+        public List<AudioClip> roamSFXList;
+
 
         public enum State
         {
@@ -63,10 +74,13 @@ namespace SCP999
             followingRange = configFollowRange.Value;
 
             candyEaten = 0;
+            maxCandy = configMaxCandy.Value;
 
             timeSinceHealing = 0f;
             healingBuffTime = 0f;
             hyperTime = 0f;
+            timeSinceBlockSFX = 0f;
+            timeSinceHugSFX = 0f;
 
             currentBehaviourStateIndex = (int)State.Roaming;
             RoundManager.Instance.SpawnedEnemies.Add(this);
@@ -125,6 +139,15 @@ namespace SCP999
                     }
                 }
             }
+
+            if (state == (int)State.Blocking)
+            {
+                timeSinceBlockSFX += Time.deltaTime;
+            }
+            if (state == (int)State.Healing)
+            {
+                timeSinceHugSFX += Time.deltaTime;
+            }
         }
 
         public override void DoAIInterval()
@@ -142,7 +165,7 @@ namespace SCP999
                     agent.speed = 5f;
                     agent.stoppingDistance = 0f;
                     dancing = false;
-                    if (TargetClosestPlayer(1.5f, true) || TargetClosestEnemy(1.5f, true))
+                    if ((TargetClosestPlayer(1.5f, true) && followPlayer) || (TargetClosestEnemy(1.5f, true) && followEnemy))
                     {
                         StopSearch(currentSearch);
                         SwitchToBehaviourClientRpc((int)State.Following);
@@ -179,6 +202,7 @@ namespace SCP999
                         SwitchToBehaviourClientRpc((int)State.Following);
                         return;
                     }
+
                     break;
 
                 case (int)State.Healing:
@@ -207,8 +231,8 @@ namespace SCP999
 
         public bool TargetClosestEntity()
         {
-            if (targetPlayer != null && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
-            else if (targetEnemy != null && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
+            if (targetPlayer != null && followPlayer && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
+            else if (targetEnemy != null && followEnemy && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
             else { return false; }
         }
 
@@ -287,6 +311,7 @@ namespace SCP999
                 if (Vector3.Distance(transform.position, targetPlayer.transform.position) <= huggingRange)
                 {
                     HealPlayer(targetPlayer);
+                    PlayHugSFX();
                 }
 
                 SetDestinationToPosition(targetPlayer.transform.position, false);
@@ -305,6 +330,7 @@ namespace SCP999
                 if (Vector3.Distance(transform.position, targetEnemy.transform.position) < huggingRange)
                 {
                     HealEnemy(targetEnemy);
+                    PlayHugSFX();
                 }
 
                 SetDestinationToPosition(targetEnemy.transform.position, false);
@@ -319,6 +345,18 @@ namespace SCP999
                 {
                     Vector3 interpolatedPosition = Vector3.Lerp(targetPlayer.transform.position, blockedTurret.transform.position, 0.5f);
                     SetDestinationToPosition(interpolatedPosition, false);
+
+                    if (Vector3.Distance(transform.position, interpolatedPosition) < 1f)
+                    {
+                        if (timeSinceBlockSFX > 0.5f)
+                        {
+                            logger.LogDebug("Playing hitSFX");
+                            int randomIndex = Random.Range(0, hitSFXList.Count - 1);
+                            creatureSFX.PlayOneShot(hitSFXList[randomIndex], 1f);
+                            timeSinceBlockSFX = 0f;
+                        }
+                    }
+
                     return true;
                 }
             }
@@ -385,10 +423,16 @@ namespace SCP999
             base.DetectNoise(noisePosition, noiseLoudness, timesPlayedInOneSpot, noiseID);
         }
 
+        public override void ReachedNodeInSearch()
+        {
+            base.ReachedNodeInSearch();
+            int randomIndex = Random.Range(0, roamSFXList.Count - 1);
+            creatureVoice.PlayOneShot(roamSFXList[randomIndex], 1f);
+        }
+
         public override void OnCollideWithPlayer(Collider other)
         {
             base.OnCollideWithPlayer(other);
-            //logger.LogDebug("Collided with player");
 
             if (timeSinceHealing > 1f)
             {
@@ -418,6 +462,8 @@ namespace SCP999
 
         public override void HitEnemy(int force = 0, PlayerControllerB playerWhoHit = null, bool playHitSFX = true, int hitID = -1)
         {
+            int randomIndex = Random.Range(0, hitSFXList.Count - 1);
+            creatureVoice.PlayOneShot(hurtSFXList[randomIndex], 1f);
             return;
         }
 
@@ -428,6 +474,16 @@ namespace SCP999
                 if (Vector3.Distance(transform.position, player.transform.position) < distance && player.performingEmote) { return true; }
             }
             return false;
+        }
+
+        public void PlayHugSFX()
+        {
+            if (timeSinceHugSFX > 3.3f)
+            {
+                int randomIndex = Random.Range(0, hugSFXList.Count - 1);
+                creatureVoice.PlayOneShot(hugSFXList[randomIndex], 1f);
+                timeSinceHugSFX = 0f;
+            }
         }
 
         public bool HealPlayer(PlayerControllerB player)
@@ -485,7 +541,7 @@ namespace SCP999
             PlayerControllerB player = StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == clientId).FirstOrDefault();
             if (player == null) { return; }
 
-            player.JumpToFearLevel(0f, false); // TODO: Test this
+            player.playersManager.fearLevel = 0f;
 
             player.health = newHealthAmount;
             HUDManager.Instance.UpdateHealthUI(newHealthAmount, false);

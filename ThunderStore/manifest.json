@@ -2,7 +2,7 @@
   "name": "SCP999",
   "version_number": "1.0.0",
   "website_url": "https://github.com/snowlance7/SCP999",
-  "description": "Adds a friendly slime to the game",
+  "description": "Adds a friendly slime to the game that heals you and eats candy",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2100",
     "Evaisa-LethalLib-0.15.1"
