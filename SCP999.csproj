@@ -39,6 +39,10 @@
     <ItemGroup>
       <Compile Remove="C:\Users\snowl\.nuget\packages\bepinex.assemblypublicizer.msbuild\0.4.1\contentFiles\cs\any\IgnoresAccessChecksToAttribute.cs" />
     </ItemGroup>
+    <ItemGroup>
+      <None Remove=".gitattributes" />
+      <None Remove=".gitignore" />
+    </ItemGroup>
 
     <!-- Primary Package References -->
     <ItemGroup>
@@ -46,18 +50,13 @@
         <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" PrivateAssets="all" />
-        <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-beta.0-ngd.0" Publicize="true" PrivateAssets="all" />
+        <PackageReference Include="Evaisa.LethalLib" Version="0.16.1" />
+        <PackageReference Include="LethalCompany.GameLibs.Steam" Version="64.0.0-ngd.0" Publicize="true" PrivateAssets="all" />
         <PackageReference Include="UnityEngine.Modules" Version="2022.3.9" IncludeAssets="compile" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
         <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="LethalLib">
-        <HintPath>..\1Resources\1Assemblies\LethalLib.dll</HintPath>
-      </Reference>
     </ItemGroup>
 
     <ItemGroup>
@@ -68,7 +67,6 @@
     <Target Name="NetcodePatch" AfterTargets="PostBuildEvent">
         <Exec Command="dotnet netcode-patch &quot;$(TargetPath)&quot; @(ReferencePathWithRefAssemblies->'&quot;%(Identity)&quot;', ' ')" />
     </Target>
-
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
       <Exec Command="xcopy &quot;C:\Users\snowl\source\repos\SCP999\Assets\scp999_assets&quot; &quot;C:\Users\snowl\source\repos\1Lethal Company Debugging\BepInEx\plugins&quot; /Y" />
     </Target>

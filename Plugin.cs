@@ -4,50 +4,45 @@ using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
 using LethalLib.Modules;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
 namespace SCP999
 {
-    [BepInPlugin(modGUID, modName, modVersion)]
+    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     [BepInDependency(LethalLib.Plugin.ModGUID)]
     public class Plugin : BaseUnityPlugin
     {
-        private const string modGUID = "ProjectSCP.SCP999";
-        private const string modName = "SCP999";
-        private const string modVersion = "1.0.0";
-
-        public static Plugin PluginInstance;
-        public static ManualLogSource LoggerInstance;
-        private readonly Harmony harmony = new Harmony(modGUID);
-        public static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
+        public static Plugin? PluginInstance;
+        public static ManualLogSource? LoggerInstance;
+        private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+        public static PlayerControllerB LocalPlayer { get { return StartOfRound.Instance.localPlayerController; } }
 
         public static AssetBundle? ModAssets;
 
         // SCP-999 Rarity Configs
-        public static ConfigEntry<int> configExperimentationLevelRarity;
-        public static ConfigEntry<int> configAssuranceLevelRarity;
-        public static ConfigEntry<int> configVowLevelRarity;
-        public static ConfigEntry<int> configOffenseLevelRarity;
-        public static ConfigEntry<int> configMarchLevelRarity;
-        public static ConfigEntry<int> configRendLevelRarity;
-        public static ConfigEntry<int> configDineLevelRarity;
-        public static ConfigEntry<int> configTitanLevelRarity;
-        public static ConfigEntry<int> configModdedLevelRarity;
-        public static ConfigEntry<int> configOtherLevelRarity;
+        public static ConfigEntry<string> config999LevelRarities;
+        public static ConfigEntry<string> config999CustomLevelRarities;
+        public static ConfigEntry<int> config999SCPDungeonRarity;
 
         // SCP-999 General Configs
+        public static ConfigEntry<float> config999Size;
         public static ConfigEntry<int> configPlayerHealAmount;
         public static ConfigEntry<int> configEnemyHealAmount;
-
         public static ConfigEntry<float> configPlayerDetectionRange;
         public static ConfigEntry<float> configEnemyDetectionRange;
-
         public static ConfigEntry<float> configFollowRange;
-
         public static ConfigEntry<int> configMaxCandy;
+
+        // Containment Jar Configs
+        public static ConfigEntry<bool> configEnableJar;
+        public static ConfigEntry<int> configJarPrice;
+        public static ConfigEntry<int> configJar999Value;
+        public static ConfigEntry<int> configJarSlimeValue;
 
         public static List<string> Sweets = new List<string> { "Blue Candy", "Green Candy", "Pink Candy", "Purple Candy", "Rainbow Candy", "Red Candy", "Yellow Candy", "Black Candy", "Candy", "Cake", "SCP-559" };
 
@@ -67,27 +62,24 @@ namespace SCP999
             // Configs
 
             // Rarity
-            configExperimentationLevelRarity = Config.Bind("Rarity", "ExperimentationLevelRarity", 50, "Experimentation Level Rarity");
-            configAssuranceLevelRarity = Config.Bind("Rarity", "AssuranceLevelRarity", 50, "Assurance Level Rarity");
-            configVowLevelRarity = Config.Bind("Rarity", "VowLevelRarity", 50, "Vow Level Rarity");
-            configOffenseLevelRarity = Config.Bind("Rarity", "OffenseLevelRarity", 30, "Offense Level Rarity");
-            configMarchLevelRarity = Config.Bind("Rarity", "MarchLevelRarity", 30, "March Level Rarity");
-            configRendLevelRarity = Config.Bind("Rarity", "RendLevelRarity", 10, "Rend Level Rarity");
-            configDineLevelRarity = Config.Bind("Rarity", "DineLevelRarity", 10, "Dine Level Rarity");
-            configTitanLevelRarity = Config.Bind("Rarity", "TitanLevelRarity", 20, "Titan Level Rarity");
-            configModdedLevelRarity = Config.Bind("Rarity", "ModdedLevelRarity", 10, "Modded Level Rarity");
-            configOtherLevelRarity = Config.Bind("Rarity", "OtherLevelRarity", 10, "Other Level Rarity");
+            config999LevelRarities = Config.Bind("SCP-999 Rarities", "Level Rarities", "ExperimentationLevel:100, AssuranceLevel:75, VowLevel:75, OffenseLevel:50, AdamanceLevel:65, MarchLevel:50, RendLevel:45, DineLevel:45, TitanLevel:75, ArtificeLevel:70, EmbrionLevel:100, Modded:50", "Rarities for each level. See default for formatting.");
+            config999CustomLevelRarities = Config.Bind("SCP-999 Rarities", "Custom Level Rarities", "Secret LabsLevel:150", "Rarities for modded levels. Same formatting as level rarities.");
+            config999SCPDungeonRarity = Config.Bind("SCP-999 Rarities", "SCP Dungeon Rarity", 150, "The rarity of SCP-999 in the SCP Dungeon. Set to -1 to use level rarities.");
 
             // General
+            config999Size = Config.Bind("General", "Size", 0.7f, "How big SCP-999 is");
             configPlayerHealAmount = Config.Bind("General", "Player Heal Amount", 10, "How much SCP-999 heals the player per second");
             configEnemyHealAmount = Config.Bind("General", "Enemy Heal Amount", 1, "How much SCP-999 heals the enemy per second");
-
             configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 20f, "How far SCP-999 can detect you");
             configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 10f, "How far SCP-999 can detect enemies");
-
             configFollowRange = Config.Bind("General", "Follow Range", 7f, "How far SCP-999 can follow you or other enemies");
-
             configMaxCandy = Config.Bind("General", "Max Candy", 3, "Max amount of candy SCP-999 can eat before something bad happens");
+
+            // Containment Jar
+            configEnableJar = Config.Bind("Containment Jar", "Enable", true, "Enable Containment Jar");
+            configJarPrice = Config.Bind("Containment Jar", "Price", 20, "Price of Containment Jar");
+            configJar999Value = Config.Bind("Containment Jar", "SCP-999 Value", 1, "Value of Containment Jar with SCP-999 inside it");
+            configJarSlimeValue = Config.Bind("Containment Jar", "Slime Value", 50, "Value of Containment Jar");
         
 
             // Loading Assets
@@ -101,33 +93,115 @@ namespace SCP999
             }
             LoggerInstance.LogDebug($"Got AssetBundle at: {Path.Combine(sAssemblyLocation, "scp999_assets")}");
 
-            EnemyType Tickler = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/TickleMonster.asset");
-            if (Tickler == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }
-            LoggerInstance.LogDebug($"Got SCP-999 prefab");
-            TerminalNode TicklerTN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/TickleMonsterTN.asset");
-            TerminalKeyword TicklerTK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/TickleMonsterTK.asset");
+            Item Jar = ModAssets.LoadAsset<Item>("Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset");
+            if (Jar == null) { LoggerInstance.LogError("Error: Couldnt get Containment Jar from assets"); return; }
+            LoggerInstance.LogDebug($"Got Containment Jar prefab");
 
-            LoggerInstance.LogDebug("Setting rarities");
-            var SCP999LevelRarities = new Dictionary<Levels.LevelTypes, int> {
-                {Levels.LevelTypes.ExperimentationLevel, configExperimentationLevelRarity.Value},
-                {Levels.LevelTypes.AssuranceLevel, configAssuranceLevelRarity.Value},
-                {Levels.LevelTypes.VowLevel, configVowLevelRarity.Value},
-                {Levels.LevelTypes.OffenseLevel, configOffenseLevelRarity.Value},
-                {Levels.LevelTypes.MarchLevel, configMarchLevelRarity.Value},
-                {Levels.LevelTypes.RendLevel, configRendLevelRarity.Value},
-                {Levels.LevelTypes.DineLevel, configDineLevelRarity.Value},
-                {Levels.LevelTypes.TitanLevel, configTitanLevelRarity.Value},
-                {Levels.LevelTypes.All, configOtherLevelRarity.Value},
-                {Levels.LevelTypes.Modded, configModdedLevelRarity.Value},
-                };
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Jar.spawnPrefab);
+            LethalLib.Modules.Utilities.FixMixerGroups(Jar.spawnPrefab);
+            LethalLib.Modules.Items.RegisterShopItem(Jar, configJarPrice.Value);
+
+            EnemyType SCP999 = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/SCP999Enemy.asset");
+            if (SCP999 == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }
+            LoggerInstance.LogDebug($"Got SCP-999 prefab");
+            TerminalNode SCP999TN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/SCP999TN.asset");
+            TerminalKeyword SCP999TK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/SCP999TK.asset");
 
             LoggerInstance.LogDebug("Registering enemy network prefab...");
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Tickler.enemyPrefab);
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(SCP999.enemyPrefab);
             LoggerInstance.LogDebug("Registering enemy...");
-            Enemies.RegisterEnemy(Tickler, SCP999LevelRarities, null, TicklerTN, TicklerTK);
+            Enemies.RegisterEnemy(SCP999, GetLevelRarities(config999LevelRarities.Value), GetCustomLevelRarities(config999CustomLevelRarities.Value), SCP999TN, SCP999TK);
 
             // Finished
-            Logger.LogInfo($"{modGUID} v{modVersion} has loaded!");
+            Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");
+        }
+
+        public Dictionary<Levels.LevelTypes, int>? GetLevelRarities(string levelsString)
+        {
+            try
+            {
+                Dictionary<Levels.LevelTypes, int> levelRaritiesDict = new Dictionary<Levels.LevelTypes, int>();
+
+                if (levelsString != null && levelsString != "")
+                {
+                    string[] levels = levelsString.Split(',');
+
+                    foreach (string level in levels)
+                    {
+                        string[] levelSplit = level.Split(':');
+                        if (levelSplit.Length != 2) { continue; }
+                        string levelType = levelSplit[0].Trim();
+                        string levelRarity = levelSplit[1].Trim();
+
+                        if (Enum.TryParse<Levels.LevelTypes>(levelType, out Levels.LevelTypes levelTypeEnum) && int.TryParse(levelRarity, out int levelRarityInt))
+                        {
+                            levelRaritiesDict.Add(levelTypeEnum, levelRarityInt);
+                        }
+                        else
+                        {
+                            LoggerInstance.LogError($"Error: Invalid level rarity: {levelType}:{levelRarity}");
+                        }
+                    }
+                }
+                return levelRaritiesDict;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error: {e}");
+                return null;
+            }
+        }
+
+        public Dictionary<string, int>? GetCustomLevelRarities(string levelsString)
+        {
+            try
+            {
+                Dictionary<string, int> customLevelRaritiesDict = new Dictionary<string, int>();
+
+                if (levelsString != null)
+                {
+                    string[] levels = levelsString.Split(',');
+
+                    foreach (string level in levels)
+                    {
+                        string[] levelSplit = level.Split(':');
+                        if (levelSplit.Length != 2) { continue; }
+                        string levelType = levelSplit[0].Trim();
+                        string levelRarity = levelSplit[1].Trim();
+
+                        if (int.TryParse(levelRarity, out int levelRarityInt))
+                        {
+                            customLevelRaritiesDict.Add(levelType, levelRarityInt);
+                        }
+                        else
+                        {
+                            LoggerInstance.LogError($"Error: Invalid level rarity: {levelType}:{levelRarity}");
+                        }
+                    }
+                }
+                return customLevelRaritiesDict;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error: {e}");
+                return null;
+            }
+        }
+
+        public static List<SpawnableEnemyWithRarity> GetEnemies()
+        {
+            LoggerInstance.LogDebug("Getting enemies");
+            List<SpawnableEnemyWithRarity> enemies = new List<SpawnableEnemyWithRarity>();
+            enemies = GameObject.Find("Terminal")
+                .GetComponentInChildren<Terminal>()
+                .moonsCatalogueList
+                .SelectMany(x => x.Enemies.Concat(x.DaytimeEnemies).Concat(x.OutsideEnemies))
+                .Where(x => x != null && x.enemyType != null && x.enemyType.name != null)
+                .GroupBy(x => x.enemyType.name, (k, v) => v.First())
+                .ToList();
+
+            LoggerInstance.LogDebug($"Enemy types: {enemies.Count}");
+            return enemies;
         }
 
         private static void InitializeNetworkBehaviours()

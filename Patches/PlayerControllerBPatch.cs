@@ -13,42 +13,53 @@ namespace SCP999.Patches
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]
-        private static void DamagePlayerPostfix(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
+        private static void DamagePlayerPostfix(PlayerControllerB __instance)
         {
-            if (StartOfRound.Instance.inShipPhase) { return; }
-
-            PlayerControllerB player = __instance;
-
-            foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+            try
             {
-                if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking) { continue; }
+                if (StartOfRound.Instance.inShipPhase) { return; }
 
-                scp.PlayerTookDamageServerRpc(player.actualClientId);
+                foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+                {
+                    if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking) { continue; }
+
+                    scp.PlayerTookDamageServerRpc(__instance.actualClientId);
+                    return;
+                }
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
                 return;
             }
-
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]
         private static bool DamagePlayerPrefix(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
         {
-            PlayerControllerB player = __instance;
-
-            if (causeOfDeath == CauseOfDeath.Gunshots)
+            try
             {
-                foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+                if (causeOfDeath == CauseOfDeath.Gunshots)
                 {
-                    if (scp.targetPlayer != null)
+                    foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
                     {
-                        if (player == scp.targetPlayer && scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking)
+                        if (scp.targetPlayer != null)
                         {
-                            return false;
+                            if (__instance == scp.targetPlayer && scp.currentBehaviourStateIndex == (int)SCP999AI.State.Blocking)
+                            {
+                                return false;
+                            }
                         }
                     }
                 }
+                return true;
             }
-            return true;
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+                return true;
+            }
         }
     }
 }

@@ -24,24 +24,32 @@ namespace SCP999.Patches
         [HarmonyPatch(nameof(Turret.SwitchTurretMode))]
         private static void SwitchTurretModePostfix(Turret __instance)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            try
             {
-                if (__instance.turretMode == TurretMode.Charging)
+                if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
                 {
-                    PlayerControllerB player = __instance.targetPlayerWithRotation;
-
-                    foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+                    if (__instance.turretMode == TurretMode.Charging)
                     {
-                        if (scp.targetPlayer != null && scp.targetPlayer == player)
+                        PlayerControllerB player = __instance.targetPlayerWithRotation;
+
+                        foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
                         {
-                            if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Following)
+                            if (scp.targetPlayer != null && scp.targetPlayer == player)
                             {
-                                scp.BlockTurretFireServerRpc();
-                                return;
+                                if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Following)
+                                {
+                                    scp.BlockTurretFireServerRpc();
+                                    return;
+                                }
                             }
                         }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e);
+                return;
             }
         }
     }

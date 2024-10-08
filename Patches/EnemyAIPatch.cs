@@ -16,27 +16,35 @@ namespace SCP999.Patches
         [HarmonyPatch(nameof(EnemyAI.HitEnemy))]
         private static void HitEnemyPostfix(EnemyAI __instance)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            try
             {
-                if (__instance.enemyType.enemyName == "SCP-999") { return; } // TODO: Get this working
-
-                int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-
-                float multiplier = 2 - (__instance.enemyHP / maxHealth);
-                float range = configEnemyDetectionRange.Value * multiplier;
-
-                foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
+                if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
                 {
-                    logger.LogDebug(__instance.enemyType.enemyName + " took damage, hp: " + __instance.enemyHP + "/" + maxHealth);
+                    if (__instance.enemyType.name == "SCP999Enemy") { return; }
 
-                    if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
+                    int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+                    logger.LogDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
+
+                    float multiplier = 2 - (__instance.enemyHP / maxHealth);
+                    float range = configEnemyDetectionRange.Value * multiplier;
+
+                    foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
                     {
-                        scp.targetPlayer = null;
-                        scp.targetEnemy = __instance;
-                        scp.EnemyTookDamageServerRpc();
-                        return;
+                        if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
+                        {
+                            logger.LogDebug(__instance.enemyType.enemyName + " took damage");
+                            //scp.targetPlayer = null;
+                            scp.targetEnemy = __instance;
+                            scp.EnemyTookDamageServerRpc();
+                            return;
+                        }
                     }
                 }
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+                return;
             }
         }
     }
