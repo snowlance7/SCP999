@@ -17,10 +17,11 @@ namespace SCP999
     [BepInDependency(LethalLib.Plugin.ModGUID)]
     public class Plugin : BaseUnityPlugin
     {
-        public static Plugin? PluginInstance;
-        public static ManualLogSource? LoggerInstance;
+        public static Plugin PluginInstance;
+        public static ManualLogSource LoggerInstance;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         public static PlayerControllerB LocalPlayer { get { return StartOfRound.Instance.localPlayerController; } }
+        public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == id).FirstOrDefault(); }
 
         public static AssetBundle? ModAssets;
 
@@ -110,7 +111,8 @@ namespace SCP999
             LoggerInstance.LogDebug("Registering enemy network prefab...");
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(SCP999.enemyPrefab);
             LoggerInstance.LogDebug("Registering enemy...");
-            Enemies.RegisterEnemy(SCP999, GetLevelRarities(config999LevelRarities.Value), GetCustomLevelRarities(config999CustomLevelRarities.Value), SCP999TN, SCP999TK);
+            LethalLib.Modules.Enemies.RegisterEnemy(SCP999, GetLevelRarities(config999LevelRarities.Value), GetCustomLevelRarities(config999CustomLevelRarities.Value), SCP999TN, SCP999TK);
+            LoggerInstance.LogDebug("Registered enemy");
 
             // Finished
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");

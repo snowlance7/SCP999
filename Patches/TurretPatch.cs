@@ -38,7 +38,7 @@ namespace SCP999.Patches
                             {
                                 if (scp.currentBehaviourStateIndex == (int)SCP999AI.State.Following)
                                 {
-                                    scp.BlockTurretFireServerRpc();
+                                    scp.BlockTurretFireServerRpc(__instance.NetworkObject);
                                     return;
                                 }
                             }

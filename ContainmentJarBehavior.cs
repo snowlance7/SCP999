@@ -117,6 +117,15 @@ namespace SCP999
             ScanNode.subText = "Contents: " + contents.ToString();
             scrapValue = _scrapValue;
             JarContents = contents;
+
+            if (JarContents == Contents.Empty)
+            {
+                itemProperties.toolTips[0] = "";
+            }
+            else
+            {
+                itemProperties.toolTips[0] = $"Release {JarContents.ToString()} [LMB]";
+            }
         }
 
         [ClientRpc]

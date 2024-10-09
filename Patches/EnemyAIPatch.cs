@@ -34,8 +34,8 @@ namespace SCP999.Patches
                         {
                             logger.LogDebug(__instance.enemyType.enemyName + " took damage");
                             //scp.targetPlayer = null;
-                            scp.targetEnemy = __instance;
-                            scp.EnemyTookDamageServerRpc();
+                            //scp.targetEnemy = __instance;
+                            scp.EnemyTookDamageServerRpc(__instance.NetworkObject);
                             return;
                         }
                     }
