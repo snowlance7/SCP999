@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2751185309
+CRC: 4071529280
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 7ff019b3ab0847553b240774acbcd8c9
+    Hash: 7c1f05cdcefcdf67ea3b274d9975e2e9
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 2f8ffe3bb291755df2c47a0ecddebf8c
+    Hash: b2cdc6dd73cc6139b9cf83541704f550
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 7ff019b3ab0847553b240774acbcd8c9
+    Hash: 7c1f05cdcefcdf67ea3b274d9975e2e9
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -38,24 +38,22 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 83
   Script: {instanceID: 0}
-- Class: 90
-  Script: {instanceID: 0}
 - Class: 91
   Script: {instanceID: 0}
 - Class: 95
   Script: {instanceID: 0}
 - Class: 114
-  Script: {fileID: 11500000, guid: c30496d6ae6d6f907456e10a94e01ec6, type: 3}
-- Class: 114
-  Script: {fileID: 11500000, guid: d3cecf05b78b173605122a700874719c, type: 3}
+  Script: {fileID: 11500000, guid: 65d3fcb39dd67306e9bb17a603308070, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 04f75356a7e9c978bddc7d568e58a50b, type: 3}
 - Class: 114
-  Script: {fileID: 11500000, guid: 65d3fcb39dd67306e9bb17a603308070, type: 3}
+  Script: {fileID: -314599437, guid: 84b6a49418568a94eadbb2f7c885eadb, type: 3}
 - Class: 114
-  Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  Script: {fileID: 40305957, guid: 84b6a49418568a94eadbb2f7c885eadb, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: c30496d6ae6d6f907456e10a94e01ec6, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 3c36d0a92cbb1f26a39169ef0eae393a, type: 3}
 - Class: 114
@@ -63,9 +61,9 @@ ClassTypes:
 - Class: 114
   Script: {fileID: 11500000, guid: 0e80ae96b3eb9177eea5c8f9dadbcda1, type: 3}
 - Class: 114
-  Script: {fileID: -314599437, guid: 84b6a49418568a94eadbb2f7c885eadb, type: 3}
+  Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
 - Class: 114
-  Script: {fileID: 40305957, guid: 84b6a49418568a94eadbb2f7c885eadb, type: 3}
+  Script: {fileID: 11500000, guid: d3cecf05b78b173605122a700874719c, type: 3}
 - Class: 115
   Script: {instanceID: 0}
 - Class: 137
@@ -92,8 +90,8 @@ SerializeReferenceClassIdentifiers:
 - AssemblyName: Assembly-CSharp
   ClassName: NavSizeLimit
 Assets:
-- Assets/ModAssets/SCP999/SCP999Enemy.asset
 - Assets/ModAssets/SCP999/Bestiary/SCP999TK.asset
 - Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset
+- Assets/ModAssets/SCP999/SCP999Enemy.asset
 - Assets/ModAssets/SCP999/Bestiary/SCP999TN.asset
 Dependencies: []

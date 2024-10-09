@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace SCP999
@@ -22,6 +23,7 @@ namespace SCP999
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         public static PlayerControllerB LocalPlayer { get { return StartOfRound.Instance.localPlayerController; } }
         public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == id).FirstOrDefault(); }
+        public static bool IsServerOrHost { get { return NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost; } }
 
         public static AssetBundle? ModAssets;
 
@@ -94,13 +96,13 @@ namespace SCP999
             }
             LoggerInstance.LogDebug($"Got AssetBundle at: {Path.Combine(sAssemblyLocation, "scp999_assets")}");
 
-            Item Jar = ModAssets.LoadAsset<Item>("Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset");
+            /*Item Jar = ModAssets.LoadAsset<Item>("Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset");
             if (Jar == null) { LoggerInstance.LogError("Error: Couldnt get Containment Jar from assets"); return; }
             LoggerInstance.LogDebug($"Got Containment Jar prefab");
 
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Jar.spawnPrefab);
             LethalLib.Modules.Utilities.FixMixerGroups(Jar.spawnPrefab);
-            LethalLib.Modules.Items.RegisterShopItem(Jar, configJarPrice.Value);
+            LethalLib.Modules.Items.RegisterShopItem(Jar, configJarPrice.Value);*/
 
             EnemyType SCP999 = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/SCP999Enemy.asset");
             if (SCP999 == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }
@@ -108,10 +110,13 @@ namespace SCP999
             TerminalNode SCP999TN = ModAssets.LoadAsset<TerminalNode>("Assets/ModAssets/SCP999/Bestiary/SCP999TN.asset");
             TerminalKeyword SCP999TK = ModAssets.LoadAsset<TerminalKeyword>("Assets/ModAssets/SCP999/Bestiary/SCP999TK.asset");
 
+            Dictionary<Levels.LevelTypes, int>? levelRarities = GetLevelRarities(config999LevelRarities.Value);
+            Dictionary<string, int>? customLevelRarities = GetCustomLevelRarities(config999CustomLevelRarities.Value);
+
             LoggerInstance.LogDebug("Registering enemy network prefab...");
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(SCP999.enemyPrefab);
             LoggerInstance.LogDebug("Registering enemy...");
-            LethalLib.Modules.Enemies.RegisterEnemy(SCP999, GetLevelRarities(config999LevelRarities.Value), GetCustomLevelRarities(config999CustomLevelRarities.Value), SCP999TN, SCP999TK);
+            LethalLib.Modules.Enemies.RegisterEnemy(SCP999, levelRarities, customLevelRarities, SCP999TN, SCP999TK);
             LoggerInstance.LogDebug("Registered enemy");
 
             // Finished
