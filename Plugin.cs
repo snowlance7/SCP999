@@ -39,6 +39,7 @@ namespace SCP999
         public static ConfigEntry<float> configPlayerDetectionRange;
         public static ConfigEntry<float> configEnemyDetectionRange;
         public static ConfigEntry<float> configFollowRange;
+        public static ConfigEntry<float> configHuggingRange;
         public static ConfigEntry<int> configMaxCandy;
 
         // Containment Jar Configs
@@ -70,17 +71,18 @@ namespace SCP999
             config999SCPDungeonRarity = Config.Bind("SCP-999 Rarities", "SCP Dungeon Rarity", 150, "The rarity of SCP-999 in the SCP Dungeon. Set to -1 to use level rarities.");
 
             // General
-            config999Size = Config.Bind("General", "Size", 0.7f, "How big SCP-999 is");
+            config999Size = Config.Bind("General", "Size", 1f, "How big SCP-999 is");
             configPlayerHealAmount = Config.Bind("General", "Player Heal Amount", 10, "How much SCP-999 heals the player per second");
             configEnemyHealAmount = Config.Bind("General", "Enemy Heal Amount", 1, "How much SCP-999 heals the enemy per second");
-            configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 20f, "How far SCP-999 can detect you");
-            configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 10f, "How far SCP-999 can detect enemies");
-            configFollowRange = Config.Bind("General", "Follow Range", 7f, "How far SCP-999 can follow you or other enemies");
+            configPlayerDetectionRange = Config.Bind("General", "Player Detection Range", 50f, "How far SCP-999 can detect you");
+            configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 15f, "How far SCP-999 can detect enemies");
+            configFollowRange = Config.Bind("General", "Follow Range", 5f, "How far SCP-999 can follow you or other enemies");
+            configHuggingRange = Config.Bind("General", "Hugging Range", 2f, "How far SCP-999 will be to you when rushing over to hug/heal you");
             configMaxCandy = Config.Bind("General", "Max Candy", 3, "Max amount of candy SCP-999 can eat before something bad happens");
 
             // Containment Jar
             configEnableJar = Config.Bind("Containment Jar", "Enable", true, "Enable Containment Jar");
-            configJarPrice = Config.Bind("Containment Jar", "Price", 20, "Price of Containment Jar");
+            configJarPrice = Config.Bind("Containment Jar", "Price", 25, "Price of Containment Jar");
             configJar999Value = Config.Bind("Containment Jar", "SCP-999 Value", 1, "Value of Containment Jar with SCP-999 inside it");
             configJarSlimeValue = Config.Bind("Containment Jar", "Slime Value", 50, "Value of Containment Jar");
         
@@ -96,13 +98,16 @@ namespace SCP999
             }
             LoggerInstance.LogDebug($"Got AssetBundle at: {Path.Combine(sAssemblyLocation, "scp999_assets")}");
 
-            /*Item Jar = ModAssets.LoadAsset<Item>("Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset");
-            if (Jar == null) { LoggerInstance.LogError("Error: Couldnt get Containment Jar from assets"); return; }
-            LoggerInstance.LogDebug($"Got Containment Jar prefab");
+            if (configEnableJar.Value)
+            {
+                Item Jar = ModAssets.LoadAsset<Item>("Assets/ModAssets/ContainmentJar/ContainmentJarItem.asset");
+                if (Jar == null) { LoggerInstance.LogError("Error: Couldnt get Containment Jar from assets"); return; }
+                LoggerInstance.LogDebug($"Got Containment Jar prefab");
 
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Jar.spawnPrefab);
-            LethalLib.Modules.Utilities.FixMixerGroups(Jar.spawnPrefab);
-            LethalLib.Modules.Items.RegisterShopItem(Jar, configJarPrice.Value);*/
+                LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Jar.spawnPrefab);
+                LethalLib.Modules.Utilities.FixMixerGroups(Jar.spawnPrefab);
+                LethalLib.Modules.Items.RegisterShopItem(Jar, configJarPrice.Value);
+            }
 
             EnemyType SCP999 = ModAssets.LoadAsset<EnemyType>("Assets/ModAssets/SCP999/SCP999Enemy.asset");
             if (SCP999 == null) { LoggerInstance.LogError("Error: Couldnt get SCP-999 from assets"); return; }

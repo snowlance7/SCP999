@@ -1,4 +1,4 @@
-﻿/*using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using HarmonyLib;
 using System.Linq;
 using Unity.Netcode;
@@ -48,4 +48,4 @@ namespace SCP999.Patches
             }
         }
     }
-}*/
+}

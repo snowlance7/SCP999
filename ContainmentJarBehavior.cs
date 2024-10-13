@@ -74,7 +74,7 @@ namespace SCP999
                     newValue = configJar999Value.Value;
                 }
 
-                //ChangeJarContentsClientRpc(contents, newValue);
+                ChangeJarContentsClientRpc(contents, newValue);
             }
         }
 
@@ -89,9 +89,7 @@ namespace SCP999
                     Enemies.SpawnableEnemy spawnableEnemy = LethalLib.Modules.Enemies.spawnableEnemies.Where(x => x.enemy.name == "SCP999Enemy").FirstOrDefault();
                     if (spawnableEnemy != null)
                     {
-                        GameObject scp999Prefab = spawnableEnemy.enemy.enemyPrefab;
-                        GameObject scp999 = Instantiate(scp999Prefab, playerHeldBy.transform.forward, Quaternion.identity);
-                        scp999.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene: true);
+                        RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemy);
                     }
                 }
                 else if (JarContents == Contents.Blob)
@@ -99,9 +97,7 @@ namespace SCP999
                     SpawnableEnemyWithRarity spawnableEnemy = GetEnemies().Where(x => x.enemyType.name == "Blob").FirstOrDefault(); // TODO: Test this
                     if (spawnableEnemy != null)
                     {
-                        GameObject slimePrefab = spawnableEnemy.enemyType.enemyPrefab;
-                        GameObject slime = Instantiate(slimePrefab, playerHeldBy.transform.forward, Quaternion.identity);
-                        slime.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene: true);
+                        RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemyType);
                     }
                 }
 
@@ -109,7 +105,7 @@ namespace SCP999
             }
         }
 
-        /*[ClientRpc]
+        [ClientRpc]
         private void ChangeJarContentsClientRpc(Contents contents, int _scrapValue)
         {
             mainObjectRenderer.material = ItemMaterials[(int)contents];
@@ -126,6 +122,11 @@ namespace SCP999
             {
                 itemProperties.toolTips[0] = $"Release {JarContents.ToString()} [LMB]";
             }
+
+            if (LocalPlayer == playerHeldBy)
+            {
+                HUDManager.Instance.itemSlotIcons[LocalPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
+            }
         }
 
         [ClientRpc]
@@ -135,6 +136,6 @@ namespace SCP999
             {
                 HUDManager.Instance.DisplayTip("You monster!", "You are a horrible person", isWarning: true);
             }
-        }*/
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿/*using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using HarmonyLib;
 using Unity.Netcode;
 
@@ -29,4 +29,4 @@ namespace SCP999
             }
         }
     }
-}*/
+}

@@ -19,7 +19,7 @@ namespace SCP999
         public List<AudioClip> hugSFXList = null!;
         public List<AudioClip> hurtSFXList = null!;
         public List<AudioClip> roamSFXList = null!;
-        public NetworkAnimator networkAnimator = null!;
+        public InteractTrigger jarTrigger = null!;
 #pragma warning restore 0649
 
         EnemyAI? targetEnemy;
@@ -30,6 +30,7 @@ namespace SCP999
         float hyperTime;
         float timeSinceBlockSFX;
         float timeSinceHugSFX;
+        float hugTime;
 
         int playerHealAmount;
         int enemyHealAmount;
@@ -38,7 +39,7 @@ namespace SCP999
         float enemyDetectionRange;
         float rangeMultiplier = 1f;
         float followingRange;
-        float huggingRange = 5f;
+        float huggingRange;
 
         bool walking;
         bool hugging;
@@ -49,8 +50,8 @@ namespace SCP999
         bool gettingInJar;
         bool blockingAnimation;
 
-        bool followPlayer;
-        bool followEnemy;
+        bool followPlayer = true;
+        bool followEnemy = true;
 
 
         public enum State
@@ -66,32 +67,26 @@ namespace SCP999
         {
             base.Start();
             logger.LogDebug("SCP-999 Spawned");
-            //debugEnemyAI = true;
 
             playerHealAmount = configPlayerHealAmount.Value;
             enemyHealAmount = configEnemyHealAmount.Value;
             playerDetectionRange = configPlayerDetectionRange.Value;
             enemyDetectionRange = configEnemyDetectionRange.Value;
             followingRange = configFollowRange.Value;
+            huggingRange = configHuggingRange.Value;
             maxCandy = configMaxCandy.Value;
 
-            /*if (transform.localScale.y != config999Size.Value)
+            if (transform.localScale.y != config999Size.Value)
             {
                 ChangeSizeClientRpc(config999Size.Value);
-            }*/
+            }
 
             SetOutsideOrInside();
 
             currentBehaviourStateIndex = (int)State.Roaming;
             RoundManager.Instance.SpawnedEnemies.Add(this);
-
-            if (IsServerOrHost)
-            {
-                networkAnimator.SetTrigger("startWalking");
-                //DoAnimationClientRpc("startWalking");
-                StartSearch(transform.position);
-            }
-            logger.LogDebug("Finished start");
+            
+            StartSearch(transform.position);
         }
 
         public override void Update()
@@ -112,35 +107,44 @@ namespace SCP999
                 hyperTime -= Time.deltaTime;
             }
 
+            if (hugTime > 0f)
+            {
+                hugTime -= Time.deltaTime;
+
+                if (!hugging)
+                {
+                    hugging = true;
+                    DoAnimationServerRpc("hugging", true);
+                }
+
+                if (hugTime <= 0f)
+                {
+                    hugging = false;
+                    DoAnimationServerRpc("hugging", false);
+                }
+            }
+
             if (targetPlayer != null && currentBehaviourStateIndex == (int)State.Blocking)
             {
                 turnCompass.LookAt(targetPlayer.gameplayCamera.transform.position);
                 transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(new Vector3(0f, turnCompass.eulerAngles.y, 0f)), 10f * Time.deltaTime);
             }
 
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing)
             {
-                if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing)
-                {
-                    if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
-                    {
-                        if (walking)
-                        {
-                            walking = false;
-                            networkAnimator.SetTrigger("stopWalking");
-                            //DoAnimationClientRpc("stopWalking");
-                        }
-                    }
-                    else
-                    {
-                        if (!walking)
-                        {
-                            walking = true;
-                            networkAnimator.SetTrigger("startWalking");
-                            //DoAnimationClientRpc("startWalking");
-                        }
-                    }
-                }
+                walking = !(agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f);
+                creatureAnimator.SetBool("walking", walking);
+            }
+
+            if (LocalPlayer.currentlyHeldObjectServer != null
+                && LocalPlayer.currentlyHeldObjectServer.itemProperties.name == "ContainmentJarItem"
+                && LocalPlayer.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().JarContents == ContainmentJarBehavior.Contents.Empty)
+            {
+                jarTrigger.interactable = true;
+            }
+            else
+            {
+                jarTrigger.interactable = false;
             }
         }
 
@@ -158,6 +162,7 @@ namespace SCP999
                 case (int)State.Roaming:
                     agent.speed = 5f;
                     agent.stoppingDistance = 0f;
+                    agent.acceleration = 8f;
                     dancing = false;
                     if ((TargetClosestPlayer(1.5f, true) && followPlayer) || (TargetClosestEnemy(1.5f, true) && followEnemy))
                     {
@@ -171,6 +176,7 @@ namespace SCP999
                 case (int)State.Following:
                     if (healingBuffTime > 0f) { agent.speed = 10f; } else { agent.speed = 5f; }
                     agent.stoppingDistance = followingRange;
+                    agent.acceleration = 10f;
 
                     if (!TargetClosestEntity())
                     {
@@ -189,20 +195,19 @@ namespace SCP999
                     }
 
                     FollowTarget();
-                    MoveToJarIfClose();
 
                     break;
 
                 case (int)State.Blocking:
                     agent.speed = 20f;
                     agent.stoppingDistance = 0f;
+                    agent.acceleration = 15f;
                     if (!MoveInFrontOfTurret())
                     {
                         logger.LogDebug("Stop Blocking");
                         blockedTurret = null;
                         blockingAnimation = false;
-                        networkAnimator.SetTrigger("stopStretch");
-                        //DoAnimationClientRpc("stopStretch");
+                        creatureAnimator.SetBool("stretching", false);
                         SwitchToBehaviourClientRpc((int)State.Following);
                         return;
                     }
@@ -212,21 +217,21 @@ namespace SCP999
                 case (int)State.Healing:
                     agent.speed = 10f;
                     agent.stoppingDistance = huggingRange;
-                    if (!hugging)
-                    {
-                        networkAnimator.SetTrigger("startHugging");
-                        //DoAnimationClientRpc("startHugging");
-                        hugging = true;
-                    }
+                    agent.acceleration = 50f;
                     MoveToHealTarget();
                     break;
 
                 case (int)State.Hyper:
                     agent.speed = 20f;
                     agent.stoppingDistance = 0f;
+                    agent.acceleration = 25f;
+
+                    creatureAnimator.SetBool("hyperDancing", true);
+                    
                     if (hyperTime <= 0f)
                     {
                         candyEaten = 0;
+                        creatureAnimator.SetBool("hyperDancing", false);
                         SwitchToBehaviourClientRpc((int)State.Roaming);
                         return;
                     }
@@ -236,7 +241,6 @@ namespace SCP999
                     logger.LogWarning("Invalid state: " + currentBehaviourStateIndex);
                     break;
             }
-            //logger.LogDebug("Finished doaiinterval");
         }
 
         public void SetOutsideOrInside()
@@ -246,7 +250,7 @@ namespace SCP999
 
             if (Vector3.Distance(transform.position, closestOutsideNode.transform.position) < Vector3.Distance(transform.position, closestInsideNode.transform.position))
             {
-                //SetEnemyOutsideClientRpc(true);
+                SetEnemyOutsideClientRpc(true);
             }
         }
 
@@ -269,31 +273,15 @@ namespace SCP999
             return closestNode;
         }
 
-        public bool MoveToJarIfClose()
+        public void GetInJar()
         {
-            foreach (var item in UnityEngine.Object.FindObjectsOfType<ContainmentJarBehavior>())
-            {
-                if (Vector3.Distance(transform.position, item.transform.position) < 15f) // TODO: Test this
-                {
-                    if (SetDestinationToPosition(item.transform.position, true))
-                    {
-                        if (Vector3.Distance(transform.position, item.transform.position) < 1f)
-                        {
-                            item.ChangeJarContents(ContainmentJarBehavior.Contents.SCP999);
-                            RoundManager.Instance.DespawnEnemyOnServer(this.NetworkObject);
-                        }
-
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            logger.LogDebug("GetInJar");
+            GetInJarServerRpc(LocalPlayer.actualClientId);
         }
 
         public bool TargetClosestEntity()
         {
-            if (targetPlayer != null && followPlayer && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
+            if (targetPlayer != null && followPlayer && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange * 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
             else if (targetEnemy != null && followEnemy && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
             else { return false; }
         }
@@ -341,22 +329,11 @@ namespace SCP999
 
             if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range
             {
-                if (!dancing && IsNearbyPlayerEmoting(followingRange) && !walking)
-                {
-                    networkAnimator.SetTrigger("startDancing");
-                    //DoAnimationClientRpc("startDancing");
-                    dancing = true;
-                }
-                else if (dancing && !IsNearbyPlayerEmoting(followingRange) && !walking)
-                {
-                    networkAnimator.SetTrigger("stopWalking");
-                    //DoAnimationClientRpc("stopWalking");
-                    dancing = false;
-                }
+                creatureAnimator.SetBool("dancing", IsNearbyPlayerEmoting(followingRange));
             }
             else // Not within following range
             {
-                SetDestinationToPosition(pos, false);
+                SetDestinationToPosition(pos);
                 dancing = false;
             }
         }
@@ -368,19 +345,8 @@ namespace SCP999
                 logger.LogDebug("Player hp: " + targetPlayer.health);
                 if (targetPlayer.health >= 100 || targetPlayer.isPlayerDead)
                 {
-                    if (hugging)
-                    {
-                        hugging = false;
-                        networkAnimator.SetTrigger("stopHugging");
-                        //DoAnimationClientRpc("stopHugging");
-                    }
-                    SwitchToBehaviourClientRpc((int)State.Roaming);
+                    SwitchToBehaviourClientRpc((int)State.Following);
                     return;
-                }
-                if (Vector3.Distance(transform.position, targetPlayer.transform.position) <= huggingRange)
-                {
-                    HealPlayer(targetPlayer);
-                    PlayHugSFX();
                 }
 
                 SetDestinationToPosition(targetPlayer.transform.position, false);
@@ -392,19 +358,8 @@ namespace SCP999
 
                 if (targetEnemy.enemyHP >= maxHealth || targetEnemy.isEnemyDead)
                 {
-                    if (hugging)
-                    {
-                        hugging = false;
-                        networkAnimator.SetTrigger("stopHugging");
-                        //DoAnimationClientRpc("stopHugging");
-                    }
-                    SwitchToBehaviourClientRpc((int)State.Roaming);
+                    SwitchToBehaviourClientRpc((int)State.Following);
                     return;
-                }
-                if (Vector3.Distance(transform.position, targetEnemy.transform.position) < huggingRange)
-                {
-                    HealEnemy(targetEnemy);
-                    PlayHugSFX();
                 }
 
                 SetDestinationToPosition(targetEnemy.transform.position, false);
@@ -426,8 +381,7 @@ namespace SCP999
                         {
                             if (!blockingAnimation)
                             {
-                                networkAnimator.SetTrigger("startStretch");
-                                //DoAnimationClientRpc("startStretch");
+                                creatureAnimator.SetBool("stretching", true);
                                 blockingAnimation = true;
                             }
                             logger.LogDebug("Playing hitSFX");
@@ -470,12 +424,11 @@ namespace SCP999
                     if (Sweets.Contains(item.itemProperties.itemName))
                     {
                         logger.LogDebug("Eating item: " + item.itemProperties.itemName);
-                        //if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(transform.localScale.y / 2); } // TODO: Test this
-                        if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); } // TODO: Test this
-                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; } // TODO: Test this
+                        if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(transform.localScale.y / 2); }
+                        if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); }
+                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
                         item.GetComponent<NetworkObject>().Despawn(true);
-                        Destroy(item.gameObject);
 
                         candyEaten += 1;
                         logger.LogDebug("Candy eaten: " + candyEaten);
@@ -491,8 +444,7 @@ namespace SCP999
         {
             hyperTime += duration;
             SwitchToBehaviourClientRpc((int)State.Hyper);
-            networkAnimator.SetTrigger("startHyperDancing");
-            //DoAnimationClientRpc("startHyperDancing");
+            creatureAnimator.SetBool("walking", false);
             dancing = true;
             StartSearch(transform.position);
             targetPlayer = null;
@@ -515,10 +467,12 @@ namespace SCP999
         {
             base.OnCollideWithPlayer(other);
 
-            if (timeSinceHealing > 1f)
+            PlayerControllerB player = MeetsStandardPlayerCollisionConditions(other);
+
+            if (player != null)
             {
-                PlayerControllerB player = MeetsStandardPlayerCollisionConditions(other);
                 HealPlayer(player);
+                Hug();
             }
         }
 
@@ -526,13 +480,10 @@ namespace SCP999
         {
             base.OnCollideWithEnemy(other, collidedEnemy);
 
-            if (timeSinceHealing > 1f)
+            if (collidedEnemy != null && collidedEnemy.enemyType.name != "SCP999Enemy")
             {
-                if (collidedEnemy != null)
-                {
-                    HealEnemy(collidedEnemy);
-                }
-                else { logger.LogError("Collided enemy is null"); }
+                HealEnemy(collidedEnemy);
+                Hug();
             }
         }
 
@@ -551,13 +502,17 @@ namespace SCP999
             return false;
         }
 
-        public void PlayHugSFX()
+        public void Hug()
         {
-            if (timeSinceHugSFX > 3.3f)
+            if (currentBehaviourStateIndex == (int)State.Following || currentBehaviourStateIndex == (int)State.Healing)
             {
-                int randomIndex = Random.Range(0, hugSFXList.Count - 1);
-                creatureVoice.PlayOneShot(hugSFXList[randomIndex], 1f);
-                timeSinceHugSFX = 0f;
+                hugTime = 1f;
+                if (timeSinceHugSFX > 5f)
+                {
+                    int randomIndex = Random.Range(0, hugSFXList.Count - 1);
+                    creatureVoice.PlayOneShot(hugSFXList[randomIndex], 1f);
+                    timeSinceHugSFX = 0f;
+                }
             }
         }
 
@@ -573,7 +528,6 @@ namespace SCP999
 
                 if (newHealthAmount > 100) { newHealthAmount = 100; }
 
-                //HealPlayerClientRpc(player.actualClientId, newHealthAmount);
                 player.health = newHealthAmount;
                 HUDManager.Instance.UpdateHealthUI(player.health, false);
                 timeSinceHealing = 0f;
@@ -596,22 +550,39 @@ namespace SCP999
                 if (healingBuffTime > 0f) { enemyToHeal.enemyHP += enemyHealAmount * 2; }
                 else { enemyToHeal.enemyHP += enemyHealAmount; }
 
-                //logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
-
                 timeSinceHealing = 0f;
             }
         }
 
         // RPC's
 
-        /*[ClientRpc]
-        private void DoAnimationClientRpc(string animationName)
+        [ServerRpc(RequireOwnership = false)]
+        private void DoAnimationServerRpc(string animationName, bool value)
         {
-            logger.LogDebug($"Doing animation: {animationName}");
-            creatureAnimator.SetTrigger(animationName);
-        }*/
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            {
+                DoAnimationClientRpc(animationName, value);
+            }
+        }
 
-        /*[ClientRpc]
+        [ClientRpc]
+        private void DoAnimationClientRpc(string animationName, bool value)
+        {
+            creatureAnimator.SetBool(animationName, value);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void GetInJarServerRpc(ulong clientId)
+        {
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            {
+                PlayerControllerB player = PlayerFromId(clientId);
+                player.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().ChangeJarContents(ContainmentJarBehavior.Contents.SCP999);
+                RoundManager.Instance.DespawnEnemyOnServer(this.NetworkObject);
+            }
+        }
+
+        [ClientRpc]
         private void SetEnemyOutsideClientRpc(bool value)
         {
             SetEnemyOutside(value);
@@ -647,7 +618,7 @@ namespace SCP999
             {
                 if (hyperTime > 0f) { return; }
 
-                if (netObjRef.TryGet(out NetworkObject networkObject)) // TODO: Test this
+                if (netObjRef.TryGet(out NetworkObject networkObject))
                 {
                     targetEnemy = networkObject.GetComponent<EnemyAI>();
                     if (currentSearch != null) { StopSearch(currentSearch); }
@@ -667,7 +638,7 @@ namespace SCP999
         {
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
-                if (netObjRef.TryGet(out NetworkObject networkObject)) // TODO: Test this
+                if (netObjRef.TryGet(out NetworkObject networkObject))
                 {
                     blockedTurret = networkObject.GetComponent<Turret>();
                     SwitchToBehaviourClientRpc((int)State.Blocking);
@@ -685,6 +656,6 @@ namespace SCP999
                     }
                 }
             }
-        }*/
+        }
     }
 }
