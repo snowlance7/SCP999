@@ -76,12 +76,15 @@ namespace SCP999
             huggingRange = configHuggingRange.Value;
             maxCandy = configMaxCandy.Value;
 
-            if (transform.localScale.y != config999Size.Value)
+            if (IsServerOrHost)
             {
-                ChangeSizeClientRpc(config999Size.Value);
-            }
+                if (transform.localScale.y != config999Size.Value)
+                {
+                    ChangeSizeClientRpc(config999Size.Value);
+                }
 
-            SetOutsideOrInside();
+                SetOutsideOrInside();
+            }
 
             currentBehaviourStateIndex = (int)State.Roaming;
             RoundManager.Instance.SpawnedEnemies.Add(this);
@@ -577,7 +580,7 @@ namespace SCP999
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
                 PlayerControllerB player = PlayerFromId(clientId);
-                player.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().ChangeJarContents(ContainmentJarBehavior.Contents.SCP999);
+                player.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().ChangeJarContentsClientRpc(ContainmentJarBehavior.Contents.SCP999);
                 RoundManager.Instance.DespawnEnemyOnServer(this.NetworkObject);
             }
         }

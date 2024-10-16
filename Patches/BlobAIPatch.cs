@@ -22,7 +22,7 @@ namespace SCP999.Patches
                     {
                         if (Vector3.Distance(__instance.transform.position, item.transform.position) < 2f) // TODO: Test this
                         {
-                            item.ChangeJarContents(ContainmentJarBehavior.Contents.Blob);
+                            item.ChangeJarContentsClientRpc(ContainmentJarBehavior.Contents.Blob);
                             RoundManager.Instance.DespawnEnemyOnServer(__instance.NetworkObject);
                             return;
                         }

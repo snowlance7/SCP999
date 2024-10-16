@@ -38,8 +38,8 @@ namespace SCP999
 
         public override void Start()
         {
-            base.Start();
             fallTime = 0f;
+            base.Start();
         }
 
         public override void GrabItem() // Synced
@@ -60,21 +60,52 @@ namespace SCP999
             }
         }
 
-        public void ChangeJarContents(Contents contents)
+        public override int GetItemDataToSave()
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            logger.LogDebug("GetItemDataToSave: " + JarContents);
+            return (int)JarContents;
+        }
+
+        public override void LoadItemSaveData(int saveData)
+        {
+            logger.LogDebug("LoadItemSaveData: " + (Contents)saveData);
+            fallTime = 0f;
+            ChangeJarContentsOnLocalClient((Contents)saveData);
+        }
+
+        public void ChangeJarContentsOnLocalClient(Contents contents)
+        {
+            logger.LogDebug("ChangeJarContentsOnLocalClient: " + contents);
+            mainObjectRenderer.material = ItemMaterials[(int)contents];
+            itemProperties.itemIcon = ItemIcons[(int)contents];
+            JarContents = contents;
+
+            if (JarContents == Contents.Empty)
             {
-                int newValue = 0;
+                scrapValue = 0;
+                itemProperties.isScrap = false;
+                itemProperties.toolTips[0] = "";
+            }
+            else
+            {
+                itemProperties.isScrap = true;
+                itemProperties.toolTips[0] = $"Release {JarContents.ToString()} [LMB]";
+
                 if (contents == Contents.Blob)
                 {
-                    newValue = configJarSlimeValue.Value;
+                    SetScrapValue(configJarSlimeValue.Value);
                 }
                 else if (contents == Contents.SCP999)
                 {
-                    newValue = configJar999Value.Value;
+                    SetScrapValue(configJar999Value.Value);
                 }
+            }
 
-                ChangeJarContentsClientRpc(contents, newValue);
+            ScanNode.subText = "Contents: " + contents.ToString();
+
+            if (playerHeldBy != null && LocalPlayer == playerHeldBy)
+            {
+                HUDManager.Instance.itemSlotIcons[LocalPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
             }
         }
 
@@ -101,32 +132,15 @@ namespace SCP999
                     }
                 }
 
-                ChangeJarContents(Contents.Empty);
+                ChangeJarContentsClientRpc(Contents.Empty);
             }
         }
 
         [ClientRpc]
-        private void ChangeJarContentsClientRpc(Contents contents, int _scrapValue)
+        public void ChangeJarContentsClientRpc(Contents contents)
         {
-            mainObjectRenderer.material = ItemMaterials[(int)contents];
-            itemProperties.itemIcon = ItemIcons[(int)contents];
-            ScanNode.subText = "Contents: " + contents.ToString();
-            scrapValue = _scrapValue;
-            JarContents = contents;
-
-            if (JarContents == Contents.Empty)
-            {
-                itemProperties.toolTips[0] = "";
-            }
-            else
-            {
-                itemProperties.toolTips[0] = $"Release {JarContents.ToString()} [LMB]";
-            }
-
-            if (LocalPlayer == playerHeldBy)
-            {
-                HUDManager.Instance.itemSlotIcons[LocalPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
-            }
+            logger.LogDebug("ChangeJarContentsClientRpc: " + contents);
+            ChangeJarContentsOnLocalClient(contents);
         }
 
         [ClientRpc]
