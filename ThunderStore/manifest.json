@@ -1,6 +1,6 @@
 {
   "name": "SCP999",
-  "version_number": "2.0.1",
+  "version_number": "2.0.2",
   "website_url": "https://github.com/snowlance7/SCP999",
   "description": "Adds a friendly slime to the game that heals you and eats candy",
   "dependencies": [

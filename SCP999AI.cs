@@ -43,12 +43,10 @@ namespace SCP999
 
         bool walking;
         bool hugging;
-        bool dancing;
 
         int maxCandy;
         int candyEaten;
         bool gettingInJar;
-        bool blockingAnimation;
 
         bool followPlayer = true;
         bool followEnemy = true;
@@ -133,12 +131,6 @@ namespace SCP999
                 transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(new Vector3(0f, turnCompass.eulerAngles.y, 0f)), 10f * Time.deltaTime);
             }
 
-            if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing)
-            {
-                walking = !(agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f);
-                creatureAnimator.SetBool("walking", walking);
-            }
-
             if (LocalPlayer.currentlyHeldObjectServer != null
                 && LocalPlayer.currentlyHeldObjectServer.itemProperties.name == "ContainmentJarItem"
                 && LocalPlayer.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().JarContents == ContainmentJarBehavior.Contents.Empty)
@@ -148,6 +140,59 @@ namespace SCP999
             else
             {
                 jarTrigger.interactable = false;
+            }
+
+            switch (currentBehaviourStateIndex)
+            {
+                case (int)State.Roaming:
+
+                    break;
+
+                case (int)State.Following:
+                    creatureAnimator.SetBool("dancing", IsNearbyPlayerEmoting(followingRange));
+
+                    break;
+
+                case (int)State.Blocking:
+                    creatureAnimator.SetBool("stretching", true);
+
+                    break;
+
+                case (int)State.Healing:
+                    
+
+                    break;
+
+                case (int)State.Hyper:
+                    creatureAnimator.SetBool("walking", false);
+                    creatureAnimator.SetBool("hyperDancing", true);
+
+                    break;
+                default:
+                    break;
+            }
+
+            if (IsServerOrHost)
+            {
+                if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing)
+                {
+                    if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
+                    {
+                        if (walking)
+                        {
+                            walking = false;
+                            DoAnimationClientRpc("walking", false);
+                        }
+                    }
+                    else
+                    {
+                        if (!walking)
+                        {
+                            walking = true;
+                            DoAnimationClientRpc("walking", true);
+                        }
+                    }
+                }
             }
         }
 
@@ -166,7 +211,6 @@ namespace SCP999
                     agent.speed = 5f;
                     agent.stoppingDistance = 0f;
                     agent.acceleration = 8f;
-                    dancing = false;
                     if ((TargetClosestPlayer(1.5f, true) && followPlayer) || (TargetClosestEnemy(1.5f, true) && followEnemy))
                     {
                         logger.LogDebug("Start Targeting");
@@ -208,10 +252,9 @@ namespace SCP999
                     if (!MoveInFrontOfTurret())
                     {
                         logger.LogDebug("Stop Blocking");
-                        blockedTurret = null;
-                        blockingAnimation = false;
-                        creatureAnimator.SetBool("stretching", false);
                         SwitchToBehaviourClientRpc((int)State.Following);
+                        blockedTurret = null;
+                        DoAnimationClientRpc("stretching", false);
                         return;
                     }
 
@@ -228,14 +271,12 @@ namespace SCP999
                     agent.speed = 20f;
                     agent.stoppingDistance = 0f;
                     agent.acceleration = 25f;
-
-                    creatureAnimator.SetBool("hyperDancing", true);
                     
                     if (hyperTime <= 0f)
                     {
                         candyEaten = 0;
-                        creatureAnimator.SetBool("hyperDancing", false);
                         SwitchToBehaviourClientRpc((int)State.Roaming);
+                        DoAnimationClientRpc("hyperDancing", false);
                         return;
                     }
                     break;
@@ -330,15 +371,7 @@ namespace SCP999
             }
             else { return; }
 
-            if (Vector3.Distance(transform.position, pos) < followingRange) // Within following range
-            {
-                creatureAnimator.SetBool("dancing", IsNearbyPlayerEmoting(followingRange));
-            }
-            else // Not within following range
-            {
-                SetDestinationToPosition(pos);
-                dancing = false;
-            }
+            SetDestinationToPosition(pos);
         }
 
         void MoveToHealTarget()
@@ -382,11 +415,6 @@ namespace SCP999
                     {
                         if (timeSinceBlockSFX > 0.5f)
                         {
-                            if (!blockingAnimation)
-                            {
-                                creatureAnimator.SetBool("stretching", true);
-                                blockingAnimation = true;
-                            }
                             logger.LogDebug("Playing hitSFX");
                             int randomIndex = Random.Range(0, hitSFXList.Count - 1);
                             creatureSFX.PlayOneShot(hitSFXList[randomIndex], 1f);
@@ -447,8 +475,6 @@ namespace SCP999
         {
             hyperTime += duration;
             SwitchToBehaviourClientRpc((int)State.Hyper);
-            creatureAnimator.SetBool("walking", false);
-            dancing = true;
             StartSearch(transform.position);
             targetPlayer = null;
             targetEnemy = null;
@@ -539,11 +565,7 @@ namespace SCP999
 
         public void HealEnemy(EnemyAI enemyToHeal)
         {
-            //SpawnableEnemyWithRarity spawnableEnemy = GetEnemies().Where(x => x.enemyType == enemyToHeal.enemyType).FirstOrDefault();
-            //if (spawnableEnemy == null) { logger.LogError("Enemy to heal not found: " + enemyToHeal.enemyType.enemyName); return; }
-
-            //int maxHealth = spawnableEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-            int maxHealth = enemyToHeal.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP; // TODO: Test this
+            int maxHealth = enemyToHeal.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
 
             logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
 

@@ -1,6 +1,10 @@
+## 2.0.2
+- Actually fixed issue with SCP-999 causing errors when spawning
+- Fixed animation syncing issues
+
 ## 2.0.1
-- The containment jar state now saves when stopping a session
 - Fixed issue with SCP-999 causing errors when spawning
+- The containment jar state now saves when stopping a session
 
 ## 2.0.0
 - Added Containment Jar item
