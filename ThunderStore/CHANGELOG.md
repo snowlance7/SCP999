@@ -1,3 +1,6 @@
+## 2.0.3
+- Changed the priority of SCP-999's navmesh agent so it doesnt block other enemies
+
 ## 2.0.2
 - Actually fixed issue with SCP-999 causing errors when spawning
 - Fixed animation syncing issues
