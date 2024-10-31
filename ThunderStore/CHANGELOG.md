@@ -1,3 +1,6 @@
+## 2.1.0
+- When releasing SCP-999 from the containment jar, it will be tamed to the player, only following that player (configurable)
+
 ## 2.0.3
 - Changed the priority of SCP-999's navmesh agent so it doesnt block other enemies
 

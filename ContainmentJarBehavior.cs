@@ -38,8 +38,8 @@ namespace SCP999
 
         public override void Start()
         {
-            fallTime = 0f;
             base.Start();
+            fallTime = 0f;
         }
 
         public override void GrabItem() // Synced
@@ -120,7 +120,11 @@ namespace SCP999
                     Enemies.SpawnableEnemy spawnableEnemy = LethalLib.Modules.Enemies.spawnableEnemies.Where(x => x.enemy.name == "SCP999Enemy").FirstOrDefault();
                     if (spawnableEnemy != null)
                     {
-                        RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemy);
+                        NetworkObject scpRef = RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemy);
+                        if (configSlimeTaming.Value)
+                        {
+                            scpRef.GetComponent<SCP999AI>().SetTamed(playerHeldBy);
+                        }
                     }
                 }
                 else if (JarContents == Contents.Blob)

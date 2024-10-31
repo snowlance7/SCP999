@@ -47,6 +47,7 @@ namespace SCP999
         public static ConfigEntry<int> configJarPrice;
         public static ConfigEntry<int> configJar999Value;
         public static ConfigEntry<int> configJarSlimeValue;
+        public static ConfigEntry<bool> configSlimeTaming;
 
         public static List<string> Sweets = new List<string> { "Blue Candy", "Green Candy", "Pink Candy", "Purple Candy", "Rainbow Candy", "Red Candy", "Yellow Candy", "Black Candy", "Candy", "Cake", "SCP-559" };
 
@@ -85,7 +86,7 @@ namespace SCP999
             configJarPrice = Config.Bind("Containment Jar", "Price", 25, "Price of Containment Jar");
             configJar999Value = Config.Bind("Containment Jar", "SCP-999 Value", 1, "Value of Containment Jar with SCP-999 inside it");
             configJarSlimeValue = Config.Bind("Containment Jar", "Slime Value", 50, "Value of Containment Jar");
-        
+            configSlimeTaming = Config.Bind("Containment Jar", "Slime Taming", true, "When true, releasing SCP-999 from the containment jar will make it tamed to the person who released it. It will only follow that person unless it becomes hyper.");
 
             // Loading Assets
             string sAssemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

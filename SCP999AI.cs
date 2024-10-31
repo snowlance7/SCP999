@@ -51,6 +51,9 @@ namespace SCP999
         bool followPlayer = true;
         bool followEnemy = true;
 
+        bool tamed = false;
+        PlayerControllerB tamedByPlayer = null!;
+
 
         public enum State
         {
@@ -205,6 +208,8 @@ namespace SCP999
                 return;
             };
 
+            if (tamed && tamedByPlayer != null) { targetPlayer = tamedByPlayer; }
+
             switch (currentBehaviourStateIndex)
             {
                 case (int)State.Roaming:
@@ -225,7 +230,7 @@ namespace SCP999
                     agent.stoppingDistance = followingRange;
                     agent.acceleration = 10f;
 
-                    if (!TargetClosestEntity())
+                    if (!TargetClosestEntity() && !tamed)
                     {
                         logger.LogDebug("Stop Targeting");
                         targetPlayer = null;
@@ -285,6 +290,14 @@ namespace SCP999
                     logger.LogWarning("Invalid state: " + currentBehaviourStateIndex);
                     break;
             }
+        }
+
+        public void SetTamed(PlayerControllerB playerTamedTo)
+        {
+            tamed = true;
+            tamedByPlayer = playerTamedTo;
+            targetPlayer = playerTamedTo;
+            SwitchToBehaviourClientRpc((int)State.Following);
         }
 
         public void SetOutsideOrInside()
@@ -478,6 +491,8 @@ namespace SCP999
             StartSearch(transform.position);
             targetPlayer = null;
             targetEnemy = null;
+            tamed = false;
+            tamedByPlayer = null!;
         }
 
         public override void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot = 0, int noiseID = 0)
@@ -620,6 +635,7 @@ namespace SCP999
             {
                 PlayerControllerB player = PlayerFromId(clientId);
                 if (player == null) { return; }
+                if (tamed && player != targetPlayer) { return; }
 
                 float multiplier = 2 - (player.health / 100f);
                 float range = configPlayerDetectionRange.Value * multiplier;
@@ -642,6 +658,7 @@ namespace SCP999
             if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
                 if (hyperTime > 0f) { return; }
+                if (tamed) { return; }
 
                 if (netObjRef.TryGet(out NetworkObject networkObject))
                 {
