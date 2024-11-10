@@ -54,6 +54,8 @@ namespace SCP999
         bool tamed = false;
         PlayerControllerB tamedByPlayer = null!;
 
+        float insanityDecreaseRate;
+
 
         public enum State
         {
@@ -62,6 +64,41 @@ namespace SCP999
             Blocking,
             Healing,
             Hyper
+        }
+
+        public void SwitchToBehaviourStateCustom(State state)
+        {
+            switch (state)
+            {
+                case State.Roaming:
+                    SetTargetNull();
+                    StartSearch(transform.position);
+
+                    break;
+                case State.Following:
+                    StopSearch(currentSearch);
+
+                    break;
+                case State.Blocking:
+                    StopSearch(currentSearch);
+
+                    break;
+                case State.Healing:
+                    StopSearch(currentSearch);
+
+                    break;
+                case State.Hyper:
+                    tamed = false;
+                    tamedByPlayer = null!;
+                    SetTargetNull();
+                    StartSearch(transform.position);
+
+                    break;
+                default:
+                    break;
+            }
+
+            SwitchToBehaviourClientRpc((int)state);
         }
 
         public override void Start()
@@ -76,6 +113,10 @@ namespace SCP999
             followingRange = configFollowRange.Value;
             huggingRange = configHuggingRange.Value;
             maxCandy = configMaxCandy.Value;
+            insanityDecreaseRate = configInsanityDecreaseRate.Value;
+
+            currentBehaviourStateIndex = (int)State.Roaming;
+            RoundManager.Instance.SpawnedEnemies.Add(this);
 
             if (IsServerOrHost)
             {
@@ -85,12 +126,8 @@ namespace SCP999
                 }
 
                 SetOutsideOrInside();
+                StartSearch(transform.position);
             }
-
-            currentBehaviourStateIndex = (int)State.Roaming;
-            RoundManager.Instance.SpawnedEnemies.Add(this);
-            
-            StartSearch(transform.position);
         }
 
         public override void Update()
@@ -177,7 +214,7 @@ namespace SCP999
 
             if (IsServerOrHost)
             {
-                if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing)
+                if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing && currentBehaviourStateIndex != (int)State.Blocking)
                 {
                     if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
                     {
@@ -208,6 +245,7 @@ namespace SCP999
                 return;
             };
 
+            if (BabyIsCryingNearby()) { return; }
             if (tamed && tamedByPlayer != null) { targetPlayer = tamedByPlayer; }
 
             switch (currentBehaviourStateIndex)
@@ -219,8 +257,7 @@ namespace SCP999
                     if ((TargetClosestPlayer(1.5f, true) && followPlayer) || (TargetClosestEnemy(1.5f, true) && followEnemy))
                     {
                         logger.LogDebug("Start Targeting");
-                        StopSearch(currentSearch);
-                        SwitchToBehaviourClientRpc((int)State.Following);
+                        SwitchToBehaviourStateCustom(State.Following);
                         break;
                     }
                     break;
@@ -233,10 +270,7 @@ namespace SCP999
                     if (!TargetClosestEntity() && !tamed)
                     {
                         logger.LogDebug("Stop Targeting");
-                        targetPlayer = null;
-                        targetEnemy = null;
-                        SwitchToBehaviourClientRpc((int)State.Roaming);
-                        StartSearch(transform.position);
+                        SwitchToBehaviourStateCustom(State.Roaming);
                         return;
                     }
                     
@@ -257,7 +291,7 @@ namespace SCP999
                     if (!MoveInFrontOfTurret())
                     {
                         logger.LogDebug("Stop Blocking");
-                        SwitchToBehaviourClientRpc((int)State.Following);
+                        SwitchToBehaviourStateCustom(State.Following);
                         blockedTurret = null;
                         DoAnimationClientRpc("stretching", false);
                         return;
@@ -269,6 +303,7 @@ namespace SCP999
                     agent.speed = 10f;
                     agent.stoppingDistance = huggingRange;
                     agent.acceleration = 50f;
+
                     MoveToHealTarget();
                     break;
 
@@ -280,7 +315,7 @@ namespace SCP999
                     if (hyperTime <= 0f)
                     {
                         candyEaten = 0;
-                        SwitchToBehaviourClientRpc((int)State.Roaming);
+                        SwitchToBehaviourStateCustom(State.Roaming);
                         DoAnimationClientRpc("hyperDancing", false);
                         return;
                     }
@@ -292,12 +327,27 @@ namespace SCP999
             }
         }
 
+        private bool BabyIsCryingNearby()
+        {
+            CaveDwellerAI baby = GameObject.FindObjectsOfType<CaveDwellerAI>().Where(x => x.babyCrying && Vector3.Distance(transform.position, x.transform.position) < x.babyCryingAudio.maxDistance).FirstOrDefault();
+
+            if (baby != null)
+            {
+                agent.speed = 10f;
+                agent.stoppingDistance = 0f;
+                agent.acceleration = 50f;
+                targetEnemy = baby;
+                return SetDestinationToPosition(baby.transform.position, true);
+            }
+            return false;
+        }
+
         public void SetTamed(PlayerControllerB playerTamedTo)
         {
             tamed = true;
             tamedByPlayer = playerTamedTo;
             targetPlayer = playerTamedTo;
-            SwitchToBehaviourClientRpc((int)State.Following);
+            SwitchToBehaviourStateCustom(State.Following);
         }
 
         public void SetOutsideOrInside()
@@ -387,14 +437,32 @@ namespace SCP999
             SetDestinationToPosition(pos);
         }
 
+        void SetTarget(PlayerControllerB player)
+        {
+            targetPlayer = player;
+            targetEnemy = null;
+        }
+
+        void SetTarget(EnemyAI enemy)
+        {
+            targetPlayer = null;
+            targetEnemy = enemy;
+        }
+
+        void SetTargetNull()
+        {
+            targetPlayer = null;
+            targetEnemy = null;
+        }
+
         void MoveToHealTarget()
         {
             if (targetPlayer != null)
             {
-                logger.LogDebug("Player hp: " + targetPlayer.health);
+                //logger.LogDebug("Player hp: " + targetPlayer.health);
                 if (targetPlayer.health >= 100 || targetPlayer.isPlayerDead)
                 {
-                    SwitchToBehaviourClientRpc((int)State.Following);
+                    SwitchToBehaviourStateCustom(State.Following);
                     return;
                 }
 
@@ -403,11 +471,11 @@ namespace SCP999
             else if (targetEnemy != null)
             {
                 int maxHealth = targetEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-                logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
+                //logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
 
                 if (targetEnemy.enemyHP >= maxHealth || targetEnemy.isEnemyDead)
                 {
-                    SwitchToBehaviourClientRpc((int)State.Following);
+                    SwitchToBehaviourStateCustom(State.Following);
                     return;
                 }
 
@@ -487,12 +555,7 @@ namespace SCP999
         public void MakeHyper(float duration)
         {
             hyperTime += duration;
-            SwitchToBehaviourClientRpc((int)State.Hyper);
-            StartSearch(transform.position);
-            targetPlayer = null;
-            targetEnemy = null;
-            tamed = false;
-            tamedByPlayer = null!;
+            SwitchToBehaviourStateCustom(State.Hyper);
         }
 
         public override void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot = 0, int noiseID = 0)
@@ -562,36 +625,68 @@ namespace SCP999
 
         public void HealPlayer(PlayerControllerB player)
         {
-            if (player != null && player.health < 100 && timeSinceHealing > 1f)
+            if (player != null && timeSinceHealing > 1f)
             {
-                logger.LogDebug("Healing player: " + player.playerUsername);
-
-                int newHealthAmount;
-                if (healingBuffTime > 0f) { newHealthAmount = player.health + (playerHealAmount * 2); }
-                else { newHealthAmount = player.health + playerHealAmount; }
-
-                if (newHealthAmount > 100) { newHealthAmount = 100; }
-
-                player.health = newHealthAmount;
-                HUDManager.Instance.UpdateHealthUI(player.health, false);
                 timeSinceHealing = 0f;
+                if (player.health < 100)
+                {
+                    //logger.LogDebug("Healing player: " + player.playerUsername);
+
+                    int newHealthAmount;
+                    if (healingBuffTime > 0f) { newHealthAmount = player.health + (playerHealAmount * 2); }
+                    else { newHealthAmount = player.health + playerHealAmount; }
+
+                    if (newHealthAmount > 100) { newHealthAmount = 100; }
+
+                    player.health = newHealthAmount;
+                    HUDManager.Instance.UpdateHealthUI(player.health, false);
+                }
+
+                player.insanityLevel -= insanityDecreaseRate;
+                player.JumpToFearLevel(0f, false);
             }
         }
 
         public void HealEnemy(EnemyAI enemyToHeal)
         {
-            int maxHealth = enemyToHeal.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-
-            logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
-
-            if (enemyToHeal.enemyHP < maxHealth && timeSinceHealing > 1f)
+            if (timeSinceHealing > 1f)
             {
-
-                if (healingBuffTime > 0f) { enemyToHeal.enemyHP += enemyHealAmount * 2; }
-                else { enemyToHeal.enemyHP += enemyHealAmount; }
-
                 timeSinceHealing = 0f;
+                int maxHealth = enemyToHeal.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+
+                //logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
+
+                if (enemyToHeal.enemyHP < maxHealth)
+                {
+
+                    if (healingBuffTime > 0f) { enemyToHeal.enemyHP += enemyHealAmount * 2; }
+                    else { enemyToHeal.enemyHP += enemyHealAmount; }
+                }
             }
+
+            if (enemyToHeal is CaveDwellerAI)
+            {
+                CaveDwellerAI baby = (CaveDwellerAI)enemyToHeal;
+                if (baby.babyCrying)
+                {
+                    baby.rockBabyTimer += Time.deltaTime * 0.4f;
+
+                    if (baby.rockBabyTimer > 1f)
+                    {
+                        baby.SetCryingLocalClient(false);
+                        baby.SetBabyCryingServerRpc(false);
+                    }
+                }
+            }
+        }
+
+        public void EnemyTookDamage(EnemyAI enemy) // TODO: Remove networking, not needed
+        {
+            if (hyperTime > 0f) { return; }
+            if (tamed) { return; }
+
+            targetEnemy = enemy;
+            SwitchToBehaviourStateCustom(State.Healing);
         }
 
         // RPC's
@@ -642,29 +737,10 @@ namespace SCP999
 
                 if (Vector3.Distance(transform.position, player.transform.position) <= range)
                 {
-                    targetEnemy = null;
-                    targetPlayer = player;
+                    SetTarget(player);
 
                     if (hyperTime > 0f) { return; }
-                    if (currentSearch != null) { StopSearch(currentSearch); }
-                    SwitchToBehaviourClientRpc((int)State.Healing);
-                }
-            }
-        }
-
-        [ServerRpc(RequireOwnership = false)]
-        public void EnemyTookDamageServerRpc(NetworkObjectReference netObjRef)
-        {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
-            {
-                if (hyperTime > 0f) { return; }
-                if (tamed) { return; }
-
-                if (netObjRef.TryGet(out NetworkObject networkObject))
-                {
-                    targetEnemy = networkObject.GetComponent<EnemyAI>();
-                    if (currentSearch != null) { StopSearch(currentSearch); }
-                    SwitchToBehaviourClientRpc((int)State.Healing);
+                    SwitchToBehaviourStateCustom(State.Healing);
                 }
             }
         }
@@ -683,7 +759,7 @@ namespace SCP999
                 if (netObjRef.TryGet(out NetworkObject networkObject))
                 {
                     blockedTurret = networkObject.GetComponent<Turret>();
-                    SwitchToBehaviourClientRpc((int)State.Blocking);
+                    SwitchToBehaviourStateCustom(State.Blocking);
                 }
 
 
@@ -693,7 +769,7 @@ namespace SCP999
                     if (turret.targetPlayerWithRotation == targetPlayer)
                     {
                         blockedTurret = turret;
-                        SwitchToBehaviourClientRpc((int)State.Blocking);
+                        SwitchToBehaviourStateCustom(State.Blocking);
                         return;
                     }
                 }

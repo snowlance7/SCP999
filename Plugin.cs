@@ -41,6 +41,7 @@ namespace SCP999
         public static ConfigEntry<float> configFollowRange;
         public static ConfigEntry<float> configHuggingRange;
         public static ConfigEntry<int> configMaxCandy;
+        public static ConfigEntry<float> configInsanityDecreaseRate;
 
         // Containment Jar Configs
         public static ConfigEntry<bool> configEnableJar;
@@ -80,6 +81,7 @@ namespace SCP999
             configFollowRange = Config.Bind("General", "Follow Range", 5f, "How far SCP-999 can follow you or other enemies");
             configHuggingRange = Config.Bind("General", "Hugging Range", 2f, "How far SCP-999 will be to you when rushing over to hug/heal you");
             configMaxCandy = Config.Bind("General", "Max Candy", 3, "Max amount of candy SCP-999 can eat before something bad happens");
+            configInsanityDecreaseRate = Config.Bind("General", "Insanity Decrease Rate", 5f, "How much insanity the player loses per second when SCP-999 is hugging them");
 
             // Containment Jar
             configEnableJar = Config.Bind("Containment Jar", "Enable", true, "Enable Containment Jar");

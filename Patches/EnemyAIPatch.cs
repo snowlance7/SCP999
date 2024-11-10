@@ -18,7 +18,7 @@ namespace SCP999.Patches
         {
             try
             {
-                if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+                if (IsServerOrHost)
                 {
                     if (__instance.enemyType.name == "SCP999Enemy") { return; }
 
@@ -35,7 +35,7 @@ namespace SCP999.Patches
                             logger.LogDebug(__instance.enemyType.enemyName + " took damage");
                             //scp.targetPlayer = null;
                             //scp.targetEnemy = __instance;
-                            scp.EnemyTookDamageServerRpc(__instance.NetworkObject);
+                            scp.EnemyTookDamage(__instance);
                             return;
                         }
                     }
