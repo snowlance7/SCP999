@@ -1,7 +1,9 @@
 ﻿using BepInEx.Logging;
 using HarmonyLib;
+using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
+using static SCP999.Plugin;
 
 namespace SCP999.Patches
 {
@@ -16,11 +18,11 @@ namespace SCP999.Patches
         {
             try
             {
-                if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+                if (IsServerOrHost)
                 {
-                    foreach (var item in UnityEngine.Object.FindObjectsOfType<ContainmentJarBehavior>())
+                    foreach (var item in HoarderBugAI.grabbableObjectsInMap.OfType<ContainmentJarBehavior>())
                     {
-                        if (Vector3.Distance(__instance.transform.position, item.transform.position) < 2f) // TODO: Test this
+                        if (Vector3.Distance(__instance.transform.position, item.transform.position) < 2f)
                         {
                             item.ChangeJarContentsClientRpc(ContainmentJarBehavior.Contents.Blob);
                             RoundManager.Instance.DespawnEnemyOnServer(__instance.NetworkObject);

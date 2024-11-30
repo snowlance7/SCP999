@@ -1,3 +1,12 @@
+## 2.2.1
+- Fixed divide by zero error that would happen if an enemies max health was 0
+- Lots of optimizations for performance
+- Fixed issue with jar floating when spawned by dropship
+- Made SCP-999 more transparent
+- Made jar less transparent
+- If tamed, SCP-999 will now teleport outside if the tamed player goes outside and vice versa
+- SCP-999 does not open doors and goes through them
+
 ## 2.2.0
 - Fixed some excessive logging issues
 - SCP-999 will now calm down Maneater babies and prioritizes them the most

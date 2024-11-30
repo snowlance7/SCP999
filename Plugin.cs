@@ -21,7 +21,7 @@ namespace SCP999
         public static Plugin PluginInstance;
         public static ManualLogSource LoggerInstance;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-        public static PlayerControllerB LocalPlayer { get { return StartOfRound.Instance.localPlayerController; } }
+        public static PlayerControllerB localPlayer { get { return StartOfRound.Instance.localPlayerController; } }
         public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts.Where(x => x.actualClientId == id).FirstOrDefault(); }
         public static bool IsServerOrHost { get { return NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost; } }
 
@@ -80,12 +80,12 @@ namespace SCP999
             configEnemyDetectionRange = Config.Bind("General", "Enemy Detection Range", 15f, "How far SCP-999 can detect enemies");
             configFollowRange = Config.Bind("General", "Follow Range", 5f, "How far SCP-999 can follow you or other enemies");
             configHuggingRange = Config.Bind("General", "Hugging Range", 2f, "How far SCP-999 will be to you when rushing over to hug/heal you");
-            configMaxCandy = Config.Bind("General", "Max Candy", 3, "Max amount of candy SCP-999 can eat before something bad happens");
+            configMaxCandy = Config.Bind("General", "Max Candy", 2, "Max amount of candy SCP-999 can eat before something bad happens");
             configInsanityDecreaseRate = Config.Bind("General", "Insanity Decrease Rate", 5f, "How much insanity the player loses per second when SCP-999 is hugging them");
 
             // Containment Jar
             configEnableJar = Config.Bind("Containment Jar", "Enable", true, "Enable Containment Jar");
-            configJarPrice = Config.Bind("Containment Jar", "Price", 25, "Price of Containment Jar");
+            configJarPrice = Config.Bind("Containment Jar", "Price", 30, "Price of Containment Jar");
             configJar999Value = Config.Bind("Containment Jar", "SCP-999 Value", 1, "Value of Containment Jar with SCP-999 inside it");
             configJarSlimeValue = Config.Bind("Containment Jar", "Slime Value", 50, "Value of Containment Jar");
             configSlimeTaming = Config.Bind("Containment Jar", "Slime Taming", true, "When true, releasing SCP-999 from the containment jar will make it tamed to the person who released it. It will only follow that person unless it becomes hyper.");

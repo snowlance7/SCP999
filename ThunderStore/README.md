@@ -64,3 +64,4 @@ s1ckboy
 - Snowy: Programmer and designer
 - Metatanium: SCP-999 Model
 - s1ckboy: Sound design
+- Xu Xiaolan: Coding help

@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using HarmonyLib;
 using Unity.Netcode;
+using static SCP999.Plugin;
 
 namespace SCP999
 {
@@ -13,7 +14,7 @@ namespace SCP999
         [HarmonyPatch(nameof(DepositItemsDesk.delayedAcceptanceOfItems))]
         public static void delayedAcceptanceOfItemsPostFix(GrabbableObject[] objectsOnDesk) // TODO: Test this
         {
-            if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+            if (IsServerOrHost)
             {
                 foreach (GrabbableObject item in objectsOnDesk)
                 {

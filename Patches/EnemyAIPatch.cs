@@ -23,6 +23,7 @@ namespace SCP999.Patches
                     if (__instance.enemyType.name == "SCP999Enemy") { return; }
 
                     int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
+                    if (maxHealth <= 0 || __instance.isEnemyDead) { return; }
                     logger.LogDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
 
                     float multiplier = 2 - (__instance.enemyHP / maxHealth);

@@ -39,7 +39,7 @@ namespace SCP999
         public override void Start()
         {
             base.Start();
-            fallTime = 0f;
+            FallToGround();
         }
 
         public override void GrabItem() // Synced
@@ -103,9 +103,9 @@ namespace SCP999
 
             ScanNode.subText = "Contents: " + contents.ToString();
 
-            if (playerHeldBy != null && LocalPlayer == playerHeldBy)
+            if (playerHeldBy != null && localPlayer == playerHeldBy)
             {
-                HUDManager.Instance.itemSlotIcons[LocalPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
+                HUDManager.Instance.itemSlotIcons[localPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
             }
         }
 
@@ -150,7 +150,7 @@ namespace SCP999
         [ClientRpc]
         public void NotifyPlayerClientRpc()
         {
-            if (lastPlayerHeldBy != null && lastPlayerHeldBy == LocalPlayer)
+            if (lastPlayerHeldBy != null && lastPlayerHeldBy == localPlayer)
             {
                 HUDManager.Instance.DisplayTip("You monster!", "You are a horrible person", isWarning: true);
             }

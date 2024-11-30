@@ -15,12 +15,22 @@ namespace SCP999
 
 #pragma warning disable 0649
         public Transform turnCompass = null!;
+        public ScanNodeProperties ScanNode = null!;
         public List<AudioClip> hitSFXList = null!;
         public List<AudioClip> hugSFXList = null!;
         public List<AudioClip> hurtSFXList = null!;
         public List<AudioClip> roamSFXList = null!;
         public InteractTrigger jarTrigger = null!;
+        public ulong lizzieSteamId;
+        public ulong snowySteamId;
 #pragma warning restore 0649
+
+        readonly static int hugAnim = Animator.StringToHash("hugging");
+        readonly static int stretchAnim = Animator.StringToHash("stretching");
+        readonly static int hyperAnim = Animator.StringToHash("hyperDancing");
+        readonly static int walkAnim = Animator.StringToHash("walking");
+        readonly static int danceAnim = Animator.StringToHash("dancing");
+
 
         EnemyAI? targetEnemy;
         Turret? blockedTurret;
@@ -55,7 +65,7 @@ namespace SCP999
         PlayerControllerB tamedByPlayer = null!;
 
         float insanityDecreaseRate;
-
+        private bool dancing;
 
         public enum State
         {
@@ -68,6 +78,7 @@ namespace SCP999
 
         public void SwitchToBehaviourStateCustom(State state)
         {
+
             switch (state)
             {
                 case State.Roaming:
@@ -81,6 +92,7 @@ namespace SCP999
                     break;
                 case State.Blocking:
                     StopSearch(currentSearch);
+                    DoAnimationClientRpc(stretchAnim, true);
 
                     break;
                 case State.Healing:
@@ -92,6 +104,8 @@ namespace SCP999
                     tamedByPlayer = null!;
                     SetTargetNull();
                     StartSearch(transform.position);
+                    DoAnimationClientRpc(walkAnim, false);
+                    DoAnimationClientRpc(hyperAnim, true);
 
                     break;
                 default:
@@ -116,7 +130,11 @@ namespace SCP999
             insanityDecreaseRate = configInsanityDecreaseRate.Value;
 
             currentBehaviourStateIndex = (int)State.Roaming;
-            RoundManager.Instance.SpawnedEnemies.Add(this);
+
+            if (!RoundManager.Instance.SpawnedEnemies.Contains(this))
+            {
+                RoundManager.Instance.SpawnedEnemies.Add(this);
+            }
 
             if (IsServerOrHost)
             {
@@ -148,21 +166,15 @@ namespace SCP999
                 hyperTime -= Time.deltaTime;
             }
 
-            if (hugTime > 0f)
+            bool _hugging = hugTime > 0f;
+            if (_hugging)
             {
                 hugTime -= Time.deltaTime;
-
-                if (!hugging)
-                {
-                    hugging = true;
-                    DoAnimationServerRpc("hugging", true);
-                }
-
-                if (hugTime <= 0f)
-                {
-                    hugging = false;
-                    DoAnimationServerRpc("hugging", false);
-                }
+            }
+            if (hugging != _hugging)
+            {
+                creatureAnimator.SetBool(hugAnim, _hugging);
+                hugging = _hugging;
             }
 
             if (targetPlayer != null && currentBehaviourStateIndex == (int)State.Blocking)
@@ -171,9 +183,9 @@ namespace SCP999
                 transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(new Vector3(0f, turnCompass.eulerAngles.y, 0f)), 10f * Time.deltaTime);
             }
 
-            if (LocalPlayer.currentlyHeldObjectServer != null
-                && LocalPlayer.currentlyHeldObjectServer.itemProperties.name == "ContainmentJarItem"
-                && LocalPlayer.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().JarContents == ContainmentJarBehavior.Contents.Empty)
+            if (localPlayer.currentlyHeldObjectServer != null
+                && localPlayer.currentlyHeldObjectServer.itemProperties.name == "ContainmentJarItem"
+                && localPlayer.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().JarContents == ContainmentJarBehavior.Contents.Empty)
             {
                 jarTrigger.interactable = true;
             }
@@ -182,63 +194,24 @@ namespace SCP999
                 jarTrigger.interactable = false;
             }
 
-            switch (currentBehaviourStateIndex)
+            if (currentBehaviourStateIndex == (int)State.Following || currentBehaviourStateIndex == (int)State.Roaming)
             {
-                case (int)State.Roaming:
+                bool _walking = agent.velocity.sqrMagnitude >= 0.01f; // TODO: Check if this causes errors on clients
 
-                    break;
-
-                case (int)State.Following:
-                    creatureAnimator.SetBool("dancing", IsNearbyPlayerEmoting(followingRange));
-
-                    break;
-
-                case (int)State.Blocking:
-                    creatureAnimator.SetBool("stretching", true);
-
-                    break;
-
-                case (int)State.Healing:
-                    
-
-                    break;
-
-                case (int)State.Hyper:
-                    creatureAnimator.SetBool("walking", false);
-                    creatureAnimator.SetBool("hyperDancing", true);
-
-                    break;
-                default:
-                    break;
-            }
-
-            if (IsServerOrHost)
-            {
-                if (currentBehaviourStateIndex != (int)State.Hyper && currentBehaviourStateIndex != (int)State.Healing && currentBehaviourStateIndex != (int)State.Blocking)
+                if (walking != _walking)
                 {
-                    if (agent.remainingDistance <= agent.stoppingDistance + 0.1f && agent.velocity.sqrMagnitude < 0.01f)
-                    {
-                        if (walking)
-                        {
-                            walking = false;
-                            DoAnimationClientRpc("walking", false);
-                        }
-                    }
-                    else
-                    {
-                        if (!walking)
-                        {
-                            walking = true;
-                            DoAnimationClientRpc("walking", true);
-                        }
-                    }
+                    creatureAnimator.SetBool(walkAnim, _walking);
+                    walking = _walking;
                 }
             }
         }
 
         public override void DoAIInterval()
         {
-            base.DoAIInterval();
+            if (moveTowardsDestination)
+            {
+                agent.SetDestination(destination);
+            }
 
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead || gettingInJar)
             {
@@ -267,17 +240,34 @@ namespace SCP999
                     agent.stoppingDistance = followingRange;
                     agent.acceleration = 10f;
 
-                    if (!TargetClosestEntity() && !tamed)
+                    if (!tamed)
                     {
-                        logger.LogDebug("Stop Targeting");
-                        SwitchToBehaviourStateCustom(State.Roaming);
-                        return;
+                        if (!TargetClosestEntity())
+                        {
+                            logger.LogDebug("Stop Targeting");
+                            SwitchToBehaviourStateCustom(State.Roaming);
+                            return;
+                        }
+                    }
+
+                    if (tamed && tamedByPlayer != null && isOutside == tamedByPlayer.isInsideFactory) // TODO: Test this
+                    {
+                        Vector3 pos = RoundManager.Instance.GetNavMeshPosition(tamedByPlayer.transform.position);
+                        agent.Warp(pos);
+                        SetEnemyOutsideClientRpc(!tamedByPlayer.isInsideFactory);
                     }
                     
                     if (MoveToSweetsIfDroppedByPlayer())
                     {
                         EatSweetsIfClose();
                         return;
+                    }
+
+                    bool _dancing = IsNearbyPlayerEmoting(followingRange);
+                    if (dancing != _dancing)
+                    {
+                        DoAnimationClientRpc(danceAnim, _dancing);
+                        dancing = _dancing;
                     }
 
                     FollowTarget();
@@ -293,7 +283,7 @@ namespace SCP999
                         logger.LogDebug("Stop Blocking");
                         SwitchToBehaviourStateCustom(State.Following);
                         blockedTurret = null;
-                        DoAnimationClientRpc("stretching", false);
+                        DoAnimationClientRpc(stretchAnim, false);
                         return;
                     }
 
@@ -316,7 +306,7 @@ namespace SCP999
                     {
                         candyEaten = 0;
                         SwitchToBehaviourStateCustom(State.Roaming);
-                        DoAnimationClientRpc("hyperDancing", false);
+                        DoAnimationClientRpc(hyperAnim, false);
                         return;
                     }
                     break;
@@ -329,7 +319,7 @@ namespace SCP999
 
         private bool BabyIsCryingNearby()
         {
-            CaveDwellerAI baby = GameObject.FindObjectsOfType<CaveDwellerAI>().Where(x => x.babyCrying && Vector3.Distance(transform.position, x.transform.position) < x.babyCryingAudio.maxDistance).FirstOrDefault();
+            CaveDwellerAI baby = RoundManager.Instance.SpawnedEnemies.OfType<CaveDwellerAI>().Where(x => x.babyCrying && Vector3.Distance(transform.position, x.transform.position) < x.babyCryingAudio.maxDistance).FirstOrDefault();
 
             if (baby != null)
             {
@@ -347,6 +337,20 @@ namespace SCP999
             tamed = true;
             tamedByPlayer = playerTamedTo;
             targetPlayer = playerTamedTo;
+
+            if (playerTamedTo.playerSteamId == snowySteamId)
+            {
+                SetScanNodeClientRpc("Following my creator");
+            }
+            else if (playerTamedTo.playerSteamId == lizzieSteamId)
+            {
+                SetScanNodeClientRpc("Following my best friend lizzie <3");
+            }
+            else
+            {
+                SetScanNodeClientRpc($"Following {playerTamedTo.playerUsername}");
+            }
+
             SwitchToBehaviourStateCustom(State.Following);
         }
 
@@ -366,7 +370,7 @@ namespace SCP999
             float closestDistance = Mathf.Infinity;
             GameObject closestNode = null!;
 
-            List<GameObject> nodes = inside ? GameObject.FindGameObjectsWithTag("AINode").ToList() : GameObject.FindGameObjectsWithTag("OutsideAINode").ToList();
+            List<GameObject> nodes = inside ? RoundManager.Instance.insideAINodes.ToList() : RoundManager.Instance.outsideAINodes.ToList();
 
             foreach (GameObject node in nodes)
             {
@@ -383,11 +387,12 @@ namespace SCP999
         public void GetInJar()
         {
             logger.LogDebug("GetInJar");
-            GetInJarServerRpc(LocalPlayer.actualClientId);
+            GetInJarServerRpc(localPlayer.actualClientId);
         }
 
         public bool TargetClosestEntity()
         {
+            logger.LogDebug("Targetting closest entitiy");
             if (targetPlayer != null && followPlayer && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange * 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
             else if (targetEnemy != null && followEnemy && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
             else { return false; }
@@ -424,7 +429,11 @@ namespace SCP999
         {
             Vector3 pos;
 
-            if (targetPlayer != null)
+            if (tamed)
+            {
+                pos = tamedByPlayer.transform.position;
+            }
+            else if (targetPlayer != null)
             {
                 pos = targetPlayer.transform.position;
             }
@@ -511,8 +520,10 @@ namespace SCP999
 
         public bool MoveToSweetsIfDroppedByPlayer()
         {
-            foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap)
             {
+                GrabbableObject item = obj.GetComponent<GrabbableObject>();
+                if (item == null) { continue; }
                 if (Vector3.Distance(transform.position, item.transform.position) <= followingRange)
                 {
                     if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.heldByPlayerOnServer)
@@ -529,8 +540,10 @@ namespace SCP999
 
         public void EatSweetsIfClose()
         {
-            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap)
             {
+                GrabbableObject item = obj.GetComponent<GrabbableObject>();
+                if (item == null) { continue; }
                 if (Vector3.Distance(transform.position, item.transform.position) < 1f)
                 {
                     if (Sweets.Contains(item.itemProperties.itemName))
@@ -540,7 +553,7 @@ namespace SCP999
                         if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); }
                         if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
-                        item.GetComponent<NetworkObject>().Despawn(true);
+                        item.NetworkObject.Despawn(true);
 
                         candyEaten += 1;
                         logger.LogDebug("Candy eaten: " + candyEaten);
@@ -581,6 +594,36 @@ namespace SCP999
                 HealPlayer(player);
                 Hug();
             }
+        }
+        public new PlayerControllerB MeetsStandardPlayerCollisionConditions(Collider other, bool inKillAnimation = false, bool overrideIsInsideFactoryCheck = false)
+        {
+            if (isEnemyDead)
+            {
+                return null;
+            }
+            if (!ventAnimationFinished)
+            {
+                return null;
+            }
+            if (inKillAnimation)
+            {
+                return null;
+            }
+            if (stunNormalizedTimer >= 0f)
+            {
+                return null;
+            }
+            PlayerControllerB component = other.gameObject.GetComponent<PlayerControllerB>();
+            if (component == null)
+            {
+                return null;
+            }
+            if (!PlayerIsTargetable(component, cannotBeInShip: false, overrideIsInsideFactoryCheck))
+            {
+                Debug.Log("Player is not targetable");
+                return null;
+            }
+            return component;
         }
 
         public override void OnCollideWithEnemy(Collider other, EnemyAI? collidedEnemy = null)
@@ -680,7 +723,7 @@ namespace SCP999
             }
         }
 
-        public void EnemyTookDamage(EnemyAI enemy) // TODO: Remove networking, not needed
+        public void EnemyTookDamage(EnemyAI enemy)
         {
             if (hyperTime > 0f) { return; }
             if (tamed) { return; }
@@ -691,19 +734,35 @@ namespace SCP999
 
         // RPC's
 
-        [ServerRpc(RequireOwnership = false)]
-        private void DoAnimationServerRpc(string animationName, bool value)
+        [ClientRpc]
+        public void SetScanNodeClientRpc(string subText)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            ScanNode.subText = subText;
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void SetTamedPlayerServerRpc(ulong clientId)
+        {
+            if (IsServerOrHost)
             {
-                DoAnimationClientRpc(animationName, value);
+                SetTamed(PlayerFromId(clientId));
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void DoAnimationServerRpc(int id, bool value)
+        {
+            if (IsServerOrHost)
+            {
+                DoAnimationClientRpc(id, value);
             }
         }
 
         [ClientRpc]
-        private void DoAnimationClientRpc(string animationName, bool value)
+        private void DoAnimationClientRpc(int id, bool value)
         {
-            creatureAnimator.SetBool(animationName, value);
+            //logger.LogDebug($"Setting {id} to {value}");
+            creatureAnimator.SetBool(id, value);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -726,7 +785,7 @@ namespace SCP999
         [ServerRpc(RequireOwnership = false)]
         public void PlayerTookDamageServerRpc(ulong clientId)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            if (IsServerOrHost)
             {
                 PlayerControllerB player = PlayerFromId(clientId);
                 if (player == null) { return; }
@@ -748,30 +807,19 @@ namespace SCP999
         [ClientRpc]
         private void ChangeSizeClientRpc(float size) // TODO: Test this
         {
+            logger.LogDebug("Changing size to " + size);
             transform.localScale = new Vector3(size, size, size);
         }
 
         [ServerRpc(RequireOwnership = false)]
         public void BlockTurretFireServerRpc(NetworkObjectReference netObjRef)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            if (IsServerOrHost)
             {
                 if (netObjRef.TryGet(out NetworkObject networkObject))
                 {
-                    blockedTurret = networkObject.GetComponent<Turret>();
+                    blockedTurret = networkObject.GetComponentInChildren<Turret>();
                     SwitchToBehaviourStateCustom(State.Blocking);
-                }
-
-
-
-                foreach (Turret turret in UnityEngine.Object.FindObjectsOfType<Turret>())
-                {
-                    if (turret.targetPlayerWithRotation == targetPlayer)
-                    {
-                        blockedTurret = turret;
-                        SwitchToBehaviourStateCustom(State.Blocking);
-                        return;
-                    }
                 }
             }
         }
