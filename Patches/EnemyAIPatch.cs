@@ -24,7 +24,7 @@ namespace SCP999.Patches
 
                     int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
                     if (maxHealth <= 0 || __instance.isEnemyDead) { return; }
-                    logger.LogDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
+                    logIfDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
 
                     float multiplier = 2 - (__instance.enemyHP / maxHealth);
                     float range = configEnemyDetectionRange.Value * multiplier;
@@ -33,7 +33,7 @@ namespace SCP999.Patches
                     {
                         if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
                         {
-                            logger.LogDebug(__instance.enemyType.enemyName + " took damage");
+                            logIfDebug(__instance.enemyType.enemyName + " took damage");
                             //scp.targetPlayer = null;
                             //scp.targetEnemy = __instance;
                             scp.EnemyTookDamage(__instance);

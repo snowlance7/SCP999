@@ -31,7 +31,7 @@ namespace SCP999.Patches
 
                     if (dungeonName == "SCPFlow")
                     {
-                        logger.LogDebug("SCPFlow detected");
+                        logIfDebug("SCPFlow detected");
 
                         SpawnableEnemyWithRarity scp = __instance.currentLevel.Enemies.Where(x => x.enemyType.name == "SCP999Enemy").FirstOrDefault();
 
@@ -39,7 +39,7 @@ namespace SCP999.Patches
                         {
                             currentLevelRarity = scp.rarity;
                             scp.rarity = config999SCPDungeonRarity.Value;
-                            logger.LogDebug($"Rarity for SCP-999 set to {scp.rarity} from {currentLevelRarity}");
+                            logIfDebug($"Rarity for SCP-999 set to {scp.rarity} from {currentLevelRarity}");
 
                             isSCPDungeon = true;
                         }
@@ -61,14 +61,14 @@ namespace SCP999.Patches
             {
                 if (isSCPDungeon)
                 {
-                    logger.LogDebug("Resetting rarities");
+                    logIfDebug("Resetting rarities");
                     isSCPDungeon = false;
 
                     SpawnableEnemyWithRarity scp = __instance.currentLevel.Enemies.Where(x => x.enemyType.name == "SCP999Enemy").FirstOrDefault();
 
                     scp.rarity = currentLevelRarity;
 
-                    logger.LogDebug($"Rarity for SCP-999 reset to {scp.rarity} from {currentLevelRarity}");
+                    logIfDebug($"Rarity for SCP-999 reset to {scp.rarity} from {currentLevelRarity}");
                 }
             }
             catch (Exception e)

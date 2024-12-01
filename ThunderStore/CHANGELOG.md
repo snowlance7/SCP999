@@ -1,3 +1,7 @@
+## 2.2.2
+- Fixed error that occurs when loot bugs spawn and refresh the items list
+- Added a debug config to disable debug logs, set to false by default
+
 ## 2.2.1
 - Fixed divide by zero error that would happen if an enemies max health was 0
 - Lots of optimizations for performance

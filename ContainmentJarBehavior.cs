@@ -62,20 +62,20 @@ namespace SCP999
 
         public override int GetItemDataToSave()
         {
-            logger.LogDebug("GetItemDataToSave: " + JarContents);
+            logIfDebug("GetItemDataToSave: " + JarContents);
             return (int)JarContents;
         }
 
         public override void LoadItemSaveData(int saveData)
         {
-            logger.LogDebug("LoadItemSaveData: " + (Contents)saveData);
+            logIfDebug("LoadItemSaveData: " + (Contents)saveData);
             fallTime = 0f;
             ChangeJarContentsOnLocalClient((Contents)saveData);
         }
 
         public void ChangeJarContentsOnLocalClient(Contents contents)
         {
-            logger.LogDebug("ChangeJarContentsOnLocalClient: " + contents);
+            logIfDebug("ChangeJarContentsOnLocalClient: " + contents);
             mainObjectRenderer.material = ItemMaterials[(int)contents];
             itemProperties.itemIcon = ItemIcons[(int)contents];
             JarContents = contents;
@@ -143,7 +143,7 @@ namespace SCP999
         [ClientRpc]
         public void ChangeJarContentsClientRpc(Contents contents)
         {
-            logger.LogDebug("ChangeJarContentsClientRpc: " + contents);
+            logIfDebug("ChangeJarContentsClientRpc: " + contents);
             ChangeJarContentsOnLocalClient(contents);
         }
 

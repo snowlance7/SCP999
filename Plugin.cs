@@ -33,6 +33,7 @@ namespace SCP999
         public static ConfigEntry<int> config999SCPDungeonRarity;
 
         // SCP-999 General Configs
+        public static ConfigEntry<bool> configEnableDebug;
         public static ConfigEntry<float> config999Size;
         public static ConfigEntry<int> configPlayerHealAmount;
         public static ConfigEntry<int> configEnemyHealAmount;
@@ -73,6 +74,7 @@ namespace SCP999
             config999SCPDungeonRarity = Config.Bind("SCP-999 Rarities", "SCP Dungeon Rarity", 150, "The rarity of SCP-999 in the SCP Dungeon. Set to -1 to use level rarities.");
 
             // General
+            configEnableDebug = Config.Bind("General", "Enable Debug", false, "Enables logging debugging logs for testing.");
             config999Size = Config.Bind("General", "Size", 1f, "How big SCP-999 is");
             configPlayerHealAmount = Config.Bind("General", "Player Heal Amount", 10, "How much SCP-999 heals the player per second");
             configEnemyHealAmount = Config.Bind("General", "Enemy Heal Amount", 1, "How much SCP-999 heals the enemy per second");
@@ -200,6 +202,14 @@ namespace SCP999
             {
                 Logger.LogError($"Error: {e}");
                 return null;
+            }
+        }
+
+        public static void logIfDebug(string message)
+        {
+            if (configEnableDebug.Value)
+            {
+                LoggerInstance.LogDebug(message);
             }
         }
 
