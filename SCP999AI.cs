@@ -520,48 +520,72 @@ namespace SCP999
 
         public bool MoveToSweetsIfDroppedByPlayer()
         {
-            foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap)
+            try
             {
-                GrabbableObject item = obj.GetComponentInChildren<GrabbableObject>();
-                if (item == null) { continue; }
-                if (Vector3.Distance(transform.position, item.transform.position) <= followingRange)
+                foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap.ToList())
                 {
-                    if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.heldByPlayerOnServer)
+                    if (obj == null)
                     {
-                        logIfDebug("Moving to item: " + item.itemProperties.itemName);
-                        agent.stoppingDistance = 0f;
-                        SetDestinationToPosition(item.transform.position, false);
-                        return true;
+                        HoarderBugAI.grabbableObjectsInMap.Remove(obj);
+                        continue;
+                    }
+                    GrabbableObject item = obj.GetComponentInChildren<GrabbableObject>();
+                    if (item == null) { continue; }
+                    if (Vector3.Distance(transform.position, item.transform.position) <= followingRange)
+                    {
+                        if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.heldByPlayerOnServer)
+                        {
+                            logIfDebug("Moving to item: " + item.itemProperties.itemName);
+                            agent.stoppingDistance = 0f;
+                            SetDestinationToPosition(item.transform.position, false);
+                            return true;
+                        }
                     }
                 }
+                return false;
             }
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         public void EatSweetsIfClose()
         {
-            foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap)
+            try
             {
-                GrabbableObject item = obj.GetComponent<GrabbableObject>();
-                if (item == null) { continue; }
-                if (Vector3.Distance(transform.position, item.transform.position) < 1f)
+                foreach (GameObject obj in HoarderBugAI.grabbableObjectsInMap.ToList())
                 {
-                    if (Sweets.Contains(item.itemProperties.itemName))
+                    if (obj == null)
                     {
-                        logIfDebug("Eating item: " + item.itemProperties.itemName);
-                        if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(transform.localScale.y / 2); }
-                        if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); }
-                        if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
+                        HoarderBugAI.grabbableObjectsInMap.Remove(obj);
+                        continue;
+                    }
+                    GrabbableObject item = obj.GetComponentInChildren<GrabbableObject>();
+                    if (item == null) { continue; }
+                    if (Vector3.Distance(transform.position, item.transform.position) < 1f)
+                    {
+                        if (Sweets.Contains(item.itemProperties.itemName))
+                        {
+                            logIfDebug("Eating item: " + item.itemProperties.itemName);
+                            if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(transform.localScale.y / 2); }
+                            if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); }
+                            if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
 
-                        item.NetworkObject.Despawn(true);
+                            item.NetworkObject.Despawn(true);
 
-                        candyEaten += 1;
-                        logIfDebug("Candy eaten: " + candyEaten);
-                        healingBuffTime += 20f;
+                            candyEaten += 1;
+                            logIfDebug("Candy eaten: " + candyEaten);
+                            healingBuffTime += 20f;
 
-                        if (candyEaten >= maxCandy) { MakeHyper(30f); }
+                            if (candyEaten >= maxCandy) { MakeHyper(30f); }
+                        }
                     }
                 }
+            }
+            catch
+            {
+                return;
             }
         }
 

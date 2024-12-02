@@ -1,5 +1,7 @@
-## 2.2.2
+## 2.2.3
 - Fixed error that occurs when loot bugs spawn and refresh the items list
+
+## 2.2.2
 - Added a debug config to disable debug logs, set to false by default
 
 ## 2.2.1
