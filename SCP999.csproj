@@ -45,6 +45,11 @@
         <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
     </PropertyGroup>
     <ItemGroup>
+      <Compile Remove="SCP999UnityProject\**" />
+      <EmbeddedResource Remove="SCP999UnityProject\**" />
+      <None Remove="SCP999UnityProject\**" />
+    </ItemGroup>
+    <ItemGroup>
       <None Remove=".gitattributes" />
       <None Remove=".gitignore" />
     </ItemGroup>

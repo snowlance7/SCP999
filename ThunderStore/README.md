@@ -36,7 +36,7 @@ In addition to its playful behavior, SCP-999 seems to love all animals (especial
 
 ## About Project SCP:
 
-Project Scp is in constant development and need help to grown into one of the major figure of Lethal Company Development. Join our [discord](https://discord.gg/C2R3rj2F) server to see updates and give your touch on our mission to make Lethal Company the second SCP foundation.
+Project Scp is in constant development and need help to grown into one of the major figure of Lethal Company Development. Join our [discord](https://discord.gg/X8S4wsxggb) server to see updates and give your touch on our mission to make Lethal Company the second SCP foundation.
 
 ## Contact
 
