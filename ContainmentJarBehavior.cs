@@ -38,12 +38,6 @@ namespace SCP999
         public Contents JarContents = Contents.Empty;
         public PlayerControllerB? lastPlayerHeldBy;
 
-        public override void Start()
-        {
-            base.Start();
-            FallToGround(false, true);
-        }
-
         public override void Update()
         {
             base.Update();
