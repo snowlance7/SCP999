@@ -370,7 +370,7 @@ namespace SCP999
             float closestDistance = Mathf.Infinity;
             GameObject closestNode = null!;
 
-            List<GameObject> nodes = inside ? RoundManager.Instance.insideAINodes.ToList() : RoundManager.Instance.outsideAINodes.ToList();
+            GameObject[] nodes = inside ? Utils.GetInsideAINodes() : Utils.GetOutsideAINodes();
 
             foreach (GameObject node in nodes)
             {

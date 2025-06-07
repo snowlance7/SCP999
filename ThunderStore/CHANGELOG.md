@@ -1,3 +1,7 @@
+## 2.2.4
+- Compatible with v70
+- Some fixes with the jar
+
 ## 2.2.3
 - Fixed error that occurs when loot bugs spawn and refresh the items list
 

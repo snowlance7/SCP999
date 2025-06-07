@@ -24,7 +24,7 @@ MonoBehaviour:
   holdButtonUse: 0
   itemSpawnsOnGround: 0
   isConductiveMetal: 0
-  isScrap: 0
+  isScrap: 1
   creditsWorth: 0
   lockedInDemo: 0
   highestSalePercentage: 80
@@ -45,14 +45,13 @@ MonoBehaviour:
   dropSFX: {fileID: 0}
   pocketSFX: {fileID: 0}
   throwSFX: {fileID: 0}
-  syncGrabFunction: 1
+  syncGrabFunction: 0
   syncUseFunction: 0
   syncDiscardFunction: 0
   syncInteractLRFunction: 0
   saveItemVariable: 1
   isDefensiveWeapon: 0
-  toolTips:
-  - 
+  toolTips: []
   verticalOffset: 0
   floorYOffset: 0
   allowDroppingAheadOfPlayer: 0

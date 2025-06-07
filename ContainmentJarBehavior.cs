@@ -1,5 +1,6 @@
 ﻿using BepInEx.Logging;
 using GameNetcodeStuff;
+using HarmonyLib;
 using LethalLib.Modules;
 using System;
 using System.Collections;
@@ -7,12 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.UIElements;
-using HarmonyLib;
+using static SCP999.ContainmentJarBehavior;
 using static SCP999.Plugin;
-using Unity.Netcode.Components;
 
 namespace SCP999
 {
@@ -20,11 +21,12 @@ namespace SCP999
     {
         private static ManualLogSource logger = LoggerInstance;
 
-#pragma warning disable 0649
-        public Sprite[] ItemIcons = null!;
-        public Material[] ItemMaterials = null!;
-        public ScanNodeProperties ScanNode = null!;
-#pragma warning restore 0649
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+        public Sprite[] ItemIcons;
+        public Material[] ItemMaterials;
+        public ScanNodeProperties ScanNode;
+        public MeshRenderer renderer;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
         internal enum Contents
         {
@@ -39,13 +41,23 @@ namespace SCP999
         public override void Start()
         {
             base.Start();
-            FallToGround();
+            FallToGround(false, true);
         }
 
-        public override void GrabItem() // Synced
+        public override void Update()
         {
-            base.GrabItem();
-            lastPlayerHeldBy = playerHeldBy;
+            base.Update();
+
+            if (playerHeldBy != null)
+            {
+                lastPlayerHeldBy = playerHeldBy;
+
+                if (playerHeldBy == localPlayer)
+                {
+                    int slot = localPlayer.ItemSlots.IndexOf(this);
+                    HUDManager.Instance.itemSlotIcons[slot].sprite = ItemIcons[(int)JarContents];
+                }
+            }
         }
 
         public override void ItemActivate(bool used, bool buttonDown = true)
@@ -76,44 +88,38 @@ namespace SCP999
         public void ChangeJarContentsOnLocalClient(Contents contents)
         {
             logIfDebug("ChangeJarContentsOnLocalClient: " + contents);
-            mainObjectRenderer.material = ItemMaterials[(int)contents];
-            itemProperties.itemIcon = ItemIcons[(int)contents];
+            renderer.material = ItemMaterials[(int)contents];
             JarContents = contents;
 
-            if (JarContents == Contents.Empty)
+            switch (JarContents)
             {
-                scrapValue = 0;
-                itemProperties.isScrap = false;
-                itemProperties.toolTips[0] = "";
-            }
-            else
-            {
-                itemProperties.isScrap = true;
-                itemProperties.toolTips[0] = $"Release {JarContents.ToString()} [LMB]";
-
-                if (contents == Contents.Blob)
-                {
-                    SetScrapValue(configJarSlimeValue.Value);
-                }
-                else if (contents == Contents.SCP999)
-                {
+                case Contents.Empty:
+                    SetScrapValue(0);
+                    break;
+                case Contents.SCP999:
                     SetScrapValue(configJar999Value.Value);
-                }
+                    break;
+                case Contents.Blob:
+                    SetScrapValue(configJarSlimeValue.Value);
+                    break;
+                default:
+                    break;
             }
 
             ScanNode.subText = "Contents: " + contents.ToString();
+        }
 
-            if (playerHeldBy != null && localPlayer == playerHeldBy)
-            {
-                HUDManager.Instance.itemSlotIcons[localPlayer.currentItemSlot].sprite = itemProperties.itemIcon;
-            }
+        public override void SetControlTipsForItem()
+        {
+            string[] toolTips = JarContents == Contents.Empty ? [] : [$"Release {JarContents.ToString()} [LMB]"];
+            HUDManager.Instance.ChangeControlTipMultiple(toolTips, holdingItem: true, itemProperties);
         }
 
         // RPCs
         [ServerRpc(RequireOwnership = false)]
         private void OpenJarServerRpc()
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            if (IsServerOrHost)
             {
                 if (JarContents == Contents.SCP999)
                 {

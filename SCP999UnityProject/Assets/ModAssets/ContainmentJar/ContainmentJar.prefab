@@ -156,7 +156,7 @@ AudioSource:
   MinDistance: 5
   MaxDistance: 10
   Pan2D: 0
-  rolloffMode: 0
+  rolloffMode: 1
   BypassEffects: 0
   BypassListenerEffects: 0
   BypassReverbZones: 0
@@ -307,6 +307,7 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 15babf84548b868468e7976aba0822c6, type: 2}
   - {fileID: 2100000, guid: 416f09d1ff6d1cf40b83c670db63b115, type: 2}
   ScanNode: {fileID: 921461916700508301}
+  renderer: {fileID: 4877630242423397132}
   JarContents: 0
   lastPlayerHeldBy: {fileID: 0}
 --- !u!1 &7589424022790847786
