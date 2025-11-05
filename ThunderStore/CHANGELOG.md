@@ -1,3 +1,6 @@
+## 2.2.5
+- Compatible with v73
+
 ## 2.2.4
 - Compatible with v70
 - Some fixes with the jar
