@@ -60,15 +60,15 @@ namespace SCP999
 
         private bool dancing;
 
-        public static float size = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Size").Value; // 1f
-        public static int playerHealAmount = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Player Heal Amount").Value; // 10
-        public static int enemyHealAmount = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Enemy Heal Amount").Value; // 1
-        public static float playerDetectionRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Player Detection Range").Value; // 50f
-        public static float enemyDetectionRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Enemy Detection Range").Value; // 15f
-        public static float followRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Follow Range").Value; // 5f
-        public static float huggingRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Hugging Range").Value; // 2f
-        public static int maxCandy = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Max Candy").Value; // 2
-        public static float insanityDecreaseRate = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Insanity Decrease Rate").Value; // 5f
+        public static float size => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Size").Value; // 1f
+        public static int playerHealAmount => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Player Heal Amount").Value; // 10
+        public static int enemyHealAmount => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Enemy Heal Amount").Value; // 1
+        public static float playerDetectionRange => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Player Detection Range").Value; // 50f
+        public static float enemyDetectionRange => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Enemy Detection Range").Value; // 15f
+        public static float followRange => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Follow Range").Value; // 5f
+        public static float huggingRange => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Hugging Range").Value; // 2f
+        public static int maxCandy => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Max Candy").Value; // 2
+        public static float insanityDecreaseRate => ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Insanity Decrease Rate").Value; // 5f
 
 
         public enum State
