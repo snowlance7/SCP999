@@ -8,7 +8,7 @@ namespace SCP999
     [HarmonyPatch(typeof(DepositItemsDesk))]
     internal class DepositItemsDeskPatch
     {
-        private static ManualLogSource logger = Plugin.LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(DepositItemsDesk.delayedAcceptanceOfItems))]

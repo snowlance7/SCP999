@@ -10,7 +10,7 @@ namespace SCP999.Patches
     [HarmonyPatch(typeof(BlobAI))]
     internal class BlobAIPatch
     {
-        private static ManualLogSource logger = Plugin.LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(BlobAI.DoAIInterval))]

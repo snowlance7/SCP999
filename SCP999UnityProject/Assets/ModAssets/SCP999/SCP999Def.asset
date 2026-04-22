@@ -1,0 +1,433 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1352062519, guid: 228a2964d5abc1b47a19fce465487a3b, type: 3}
+  m_Name: SCP999Def
+  m_EditorClassIdentifier: 
+  _configEntries:
+  - settingName: Size
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 1
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How big SCP-999 is
+  - settingName: Player Heal Amount
+    DynamicConfigType: 1
+    defaultString: 
+    defaultInt: 2
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How much SCP-999 heals the player per second
+  - settingName: Enemy Heal Amount
+    DynamicConfigType: 1
+    defaultString: 
+    defaultInt: 1
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How much SCP-999 heals an enemy per second
+  - settingName: Player Detection Range
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 40
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How far SCP-999 can detect a player when they are hurt
+  - settingName: Enemy Detection Range
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 10
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How far SCP-999 can detect an enemy when they get hurt
+  - settingName: Follow Range
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 5
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: The distance in which SCP-999 will follow a player or enemy when
+      following them
+  - settingName: Hugging Range
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 2
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: The distance in which SCP-999 will follow a player or enemy when
+      healing them
+  - settingName: Max Candy
+    DynamicConfigType: 1
+    defaultString: 
+    defaultInt: 2
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: Max amount of candy SCP-999 can eat before becoming hyper
+  - settingName: Insanity Decrease Rate
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 5
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: How much insanity the player loses per second when SCP-999 is hugging/healing
+      them
+  _tags: []
+  <Key>k__BackingField:
+    _namespace: scpnineninenine
+    _key: scpnineninenine
+  <EnemyType>k__BackingField: {fileID: 11400000, guid: ec93f0d2d91cc504993634331dabc12c,
+    type: 2}
+  <SpawnTable>k__BackingField: 1
+  <BestiaryNodeText>k__BackingField: 'The Tickle Monster
+
+
+    Sigurd''s danger level:
+    -F%
+
+
+    Scientific name: SCP-999
+
+
+    When I saw this thing I thought it was
+    a Hygrodere, but after closer inspection, it moves and behaves a lot differently.
+    It seems to have an affinity to humans. Touching it made me feel relaxed, like
+    all my fear just melted away. It followed us around and gave us hugs to calm
+    us down. Richard got shot by a turret while we were exploring and the thing jumped
+    in front of the turret fire! It tackled Richard and his wounds were no longer
+    there. I wonder if we could bottle this stuff up and use it for healing injuries,
+    it''d be a lot better than any modern medicine for sure.
+
+
+
+    After having
+    it around for a while we did learn that this little guy also likes healing other
+    creatures, so we had to drag him away if we wanted to get rid of them.
+
+
+
+    Many
+    people might have many different name for this little guy, but the only good
+    name i could give him was "friend" -Sigurd'
+  <BestiaryWordOverride>k__BackingField: SCP-999
+  <MoonSpawnWeightsConfig>k__BackingField:
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: vanilla
+    MathOperation: 0
+    Weight: 5
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: custom
+    MathOperation: 0
+    Weight: 10
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: experimentation
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: vow
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: march
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: assurance
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: offense
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: adamance
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: embrion
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: rend
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: dine
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: titan
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: artifice
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_none
+    MathOperation: 2
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_low
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_medium
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_high
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_ultra_high
+    MathOperation: 0
+    Weight: 0
+  <InteriorSpawnWeightsConfig>k__BackingField:
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: vanilla
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: custom
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: facility
+    MathOperation: 0
+    Weight: 5
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: mansion
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: mineshaft
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_none
+    MathOperation: 2
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_low
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_medium
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_high
+    MathOperation: 0
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_ultra_high
+    MathOperation: 0
+    Weight: 0
+  <WeatherSpawnWeightsConfig>k__BackingField:
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: vanilla
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: custom
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: none
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: rainy
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: stormy
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: foggy
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: flooded
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: lethal_company
+      _key: eclipsed
+    MathOperation: 2
+    Weight: 2
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_none
+    MathOperation: 2
+    Weight: 0
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_low
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_medium
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_high
+    MathOperation: 2
+    Weight: 1
+  - NamespacedKey:
+      _namespace: scpnineninenine
+      _key: scpnineninenine_ultra_high
+    MathOperation: 2
+    Weight: 1
+  <RouteSpawnWeightsConfig>k__BackingField: []
+  <GenerateSpawnWeightsConfig>k__BackingField: 1
+  <GeneratePowerLevelConfig>k__BackingField: 1
+  <GenerateMaxSpawnCountConfig>k__BackingField: 1
+  <MoonSpawnWeights>k__BackingField: 
+  <InteriorSpawnWeights>k__BackingField: 
+  <WeatherSpawnWeights>k__BackingField: 

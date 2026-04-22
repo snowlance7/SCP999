@@ -9,7 +9,7 @@ namespace SCP999.Patches
     [HarmonyPatch(typeof(PlayerControllerB))]
     internal class PlayerControllerBPatch
     {
-        private static ManualLogSource logger = LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(PlayerControllerB.DamagePlayer))]

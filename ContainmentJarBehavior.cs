@@ -1,32 +1,25 @@
-﻿using BepInEx.Logging;
+﻿using Dusk;
 using GameNetcodeStuff;
-using HarmonyLib;
-using LethalLib.Modules;
+using ItemSCPs;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
-using UnityEngine.UIElements;
-using static SCP999.ContainmentJarBehavior;
 using static SCP999.Plugin;
 
 namespace SCP999
 {
     internal class ContainmentJarBehavior : PhysicsProp
     {
-        private static ManualLogSource logger = LoggerInstance;
+        public Sprite[] ItemIcons = null!;
+        public Material[] ItemMaterials = null!;
+        public ScanNodeProperties ScanNode = null!;
+        public MeshRenderer renderer = null!;
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-        public Sprite[] ItemIcons;
-        public Material[] ItemMaterials;
-        public ScanNodeProperties ScanNode;
-        public MeshRenderer renderer;
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+        int jar999Value = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("SCP-999 Value").Value; // 1
+        int jarSlimeValue = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("Slime Value").Value; // 50
+        bool slimeTaming = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<bool>("Slime Taming").Value; // true
 
         internal enum Contents
         {
@@ -68,20 +61,20 @@ namespace SCP999
 
         public override int GetItemDataToSave()
         {
-            logIfDebug("GetItemDataToSave: " + JarContents);
+            logger.LogDebug("GetItemDataToSave: " + JarContents);
             return (int)JarContents;
         }
 
         public override void LoadItemSaveData(int saveData)
         {
-            logIfDebug("LoadItemSaveData: " + (Contents)saveData);
+            logger.LogDebug("LoadItemSaveData: " + (Contents)saveData);
             fallTime = 0f;
             ChangeJarContentsOnLocalClient((Contents)saveData);
         }
 
         public void ChangeJarContentsOnLocalClient(Contents contents)
         {
-            logIfDebug("ChangeJarContentsOnLocalClient: " + contents);
+            logger.LogDebug("ChangeJarContentsOnLocalClient: " + contents);
             renderer.material = ItemMaterials[(int)contents];
             JarContents = contents;
 
@@ -91,10 +84,10 @@ namespace SCP999
                     SetScrapValue(0);
                     break;
                 case Contents.SCP999:
-                    SetScrapValue(configJar999Value.Value);
+                    SetScrapValue(jar999Value);
                     break;
                 case Contents.Blob:
-                    SetScrapValue(configJarSlimeValue.Value);
+                    SetScrapValue(jarSlimeValue);
                     break;
                 default:
                     break;
@@ -113,37 +106,26 @@ namespace SCP999
         [ServerRpc(RequireOwnership = false)]
         private void OpenJarServerRpc()
         {
-            if (IsServerOrHost)
-            {
-                if (JarContents == Contents.SCP999)
-                {
-                    Enemies.SpawnableEnemy spawnableEnemy = LethalLib.Modules.Enemies.spawnableEnemies.Where(x => x.enemy.name == "SCP999Enemy").FirstOrDefault();
-                    if (spawnableEnemy != null)
-                    {
-                        NetworkObject scpRef = RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemy);
-                        if (configSlimeTaming.Value)
-                        {
-                            scpRef.GetComponent<SCP999AI>().SetTamed(playerHeldBy);
-                        }
-                    }
-                }
-                else if (JarContents == Contents.Blob)
-                {
-                    SpawnableEnemyWithRarity spawnableEnemy = GetEnemies().Where(x => x.enemyType.name == "Blob").FirstOrDefault(); // TODO: Test this
-                    if (spawnableEnemy != null)
-                    {
-                        RoundManager.Instance.SpawnEnemyGameObject(playerHeldBy.transform.position + new Vector3(0, 0, 3.5f), playerHeldBy.transform.rotation.y + 180, 0, spawnableEnemy.enemyType);
-                    }
-                }
+            if (!IsServer) { return; }
 
-                ChangeJarContentsClientRpc(Contents.Empty);
+            if (JarContents == Contents.SCP999)
+            {
+                SCP999AI scp999 = (SCP999AI)Utils.SpawnEnemy(SCP999Keys.SCP999, playerHeldBy.transform.position + new Vector3(0, 0, 3.5f))!;
+                if (slimeTaming)
+                    scp999.SetTamed(playerHeldBy);
             }
+            else if (JarContents == Contents.Blob)
+            {
+                Utils.SpawnEnemy(Dawn.EnemyKeys.Blob, playerHeldBy.transform.position + new Vector3(0, 0, 3.5f));
+            }
+
+            ChangeJarContentsClientRpc(Contents.Empty);
         }
 
         [ClientRpc]
         public void ChangeJarContentsClientRpc(Contents contents)
         {
-            logIfDebug("ChangeJarContentsClientRpc: " + contents);
+            logger.LogDebug("ChangeJarContentsClientRpc: " + contents);
             ChangeJarContentsOnLocalClient(contents);
         }
 

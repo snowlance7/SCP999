@@ -10,7 +10,7 @@ namespace SCP999.Patches
     [HarmonyPatch(typeof(EnemyAI))]
     internal class EnemyAIPatch
     {
-        private static ManualLogSource logger = LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(EnemyAI.HitEnemy))]
@@ -24,16 +24,16 @@ namespace SCP999.Patches
 
                     int maxHealth = __instance.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
                     if (maxHealth <= 0 || __instance.isEnemyDead) { return; }
-                    logIfDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
+                    logger.LogDebug($"Max health of {__instance.enemyType.name} is {maxHealth}");
 
                     float multiplier = 2 - (__instance.enemyHP / maxHealth);
-                    float range = configEnemyDetectionRange.Value * multiplier;
+                    float range = SCP999AI.enemyDetectionRange * multiplier;
 
                     foreach (var scp in RoundManager.Instance.SpawnedEnemies.OfType<SCP999AI>())
                     {
                         if (Vector3.Distance(scp.transform.position, __instance.transform.position) <= range)
                         {
-                            logIfDebug(__instance.enemyType.enemyName + " took damage");
+                            logger.LogDebug(__instance.enemyType.enemyName + " took damage");
                             //scp.targetPlayer = null;
                             //scp.targetEnemy = __instance;
                             scp.EnemyTookDamage(__instance);

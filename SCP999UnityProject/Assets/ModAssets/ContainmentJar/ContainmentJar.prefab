@@ -86,7 +86,7 @@ GameObject:
   - component: {fileID: 2421169862628846704}
   - component: {fileID: 646919619825347779}
   - component: {fileID: 1537700163937927376}
-  - component: {fileID: 3511402106476179196}
+  - component: {fileID: 1122038897066853316}
   m_Layer: 6
   m_Name: ContainmentJar
   m_TagString: PhysicsProp
@@ -141,7 +141,7 @@ AudioSource:
   m_GameObject: {fileID: 3521035997691315358}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 24300008, guid: cb9fb87df5ca10840a2a5b2dc5a4284c,
+  OutputAudioMixerGroup: {fileID: 24300008, guid: 64b08a5192e203847bb952b79319ef18,
     type: 2}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
@@ -250,7 +250,7 @@ MonoBehaviour:
   SpawnWithObservers: 1
   DontDestroyWithOwner: 1
   AutoObjectParentSync: 0
---- !u!114 &3511402106476179196
+--- !u!114 &1122038897066853316
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -259,7 +259,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 3521035997691315358}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: -314599437, guid: cd465ff15d6a1084490c34454858f639, type: 3}
+  m_Script: {fileID: -314599437, guid: d03d7ac043357ce478a159f4e18d032c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   grabbable: 1
@@ -298,6 +298,7 @@ MonoBehaviour:
   reachedFloorTarget: 0
   grabbableToEnemies: 1
   hasBeenHeld: 0
+  rotateObject: 0
   ItemIcons:
   - {fileID: 21300000, guid: 4ca829f57b80c4e43a3d6ddc7ca2b4d2, type: 3}
   - {fileID: 21300000, guid: 3a0c9901e7acf834fb31d0760eaf432c, type: 3}

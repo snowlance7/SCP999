@@ -1,9 +1,10 @@
 ﻿using BepInEx.Logging;
+using Dusk;
 using GameNetcodeStuff;
+using ItemSCPs;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 using static SCP999.Plugin;
 
@@ -11,7 +12,7 @@ namespace SCP999
 {
     public class SCP999AI : EnemyAI
     {
-        private static ManualLogSource logger = LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
 #pragma warning disable 0649
         public Transform turnCompass = null!;
@@ -42,19 +43,12 @@ namespace SCP999
         float timeSinceHugSFX;
         float hugTime;
 
-        int playerHealAmount;
-        int enemyHealAmount;
-
-        float playerDetectionRange;
-        float enemyDetectionRange;
         float rangeMultiplier = 1f;
         float followingRange;
-        float huggingRange;
 
         bool walking;
         bool hugging;
 
-        int maxCandy;
         int candyEaten;
         bool gettingInJar;
 
@@ -64,8 +58,18 @@ namespace SCP999
         bool tamed = false;
         PlayerControllerB tamedByPlayer = null!;
 
-        float insanityDecreaseRate;
         private bool dancing;
+
+        public static float size = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Size").Value; // 1f
+        public static int playerHealAmount = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Player Heal Amount").Value; // 10
+        public static int enemyHealAmount = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Enemy Heal Amount").Value; // 1
+        public static float playerDetectionRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Player Detection Range").Value; // 50f
+        public static float enemyDetectionRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Enemy Detection Range").Value; // 15f
+        public static float followRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Follow Range").Value; // 5f
+        public static float huggingRange = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Hugging Range").Value; // 2f
+        public static int maxCandy = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<int>("Max Candy").Value; // 2
+        public static float insanityDecreaseRate = ContentHandler<SCP999ContentHandler>.Instance.SCP999!.GetConfig<float>("Insanity Decrease Rate").Value; // 5f
+
 
         public enum State
         {
@@ -118,16 +122,7 @@ namespace SCP999
         public override void Start()
         {
             base.Start();
-            logIfDebug("SCP-999 Spawned");
-
-            playerHealAmount = configPlayerHealAmount.Value;
-            enemyHealAmount = configEnemyHealAmount.Value;
-            playerDetectionRange = configPlayerDetectionRange.Value;
-            enemyDetectionRange = configEnemyDetectionRange.Value;
-            followingRange = configFollowRange.Value;
-            huggingRange = configHuggingRange.Value;
-            maxCandy = configMaxCandy.Value;
-            insanityDecreaseRate = configInsanityDecreaseRate.Value;
+            logger.LogDebug("SCP-999 Spawned");
 
             currentBehaviourStateIndex = (int)State.Roaming;
 
@@ -138,9 +133,9 @@ namespace SCP999
 
             if (IsServerOrHost)
             {
-                if (transform.localScale.y != config999Size.Value)
+                if (transform.localScale.y != size)
                 {
-                    ChangeSizeClientRpc(config999Size.Value);
+                    ChangeSizeClientRpc(size);
                 }
 
                 SetOutsideOrInside();
@@ -229,7 +224,7 @@ namespace SCP999
                     agent.acceleration = 8f;
                     if ((TargetClosestPlayer(1.5f, true) && followPlayer) || (TargetClosestEnemy(1.5f, true) && followEnemy))
                     {
-                        logIfDebug("Start Targeting");
+                        logger.LogDebug("Start Targeting");
                         SwitchToBehaviourStateCustom(State.Following);
                         break;
                     }
@@ -244,7 +239,7 @@ namespace SCP999
                     {
                         if (!TargetClosestEntity())
                         {
-                            logIfDebug("Stop Targeting");
+                            logger.LogDebug("Stop Targeting");
                             SwitchToBehaviourStateCustom(State.Roaming);
                             return;
                         }
@@ -280,7 +275,7 @@ namespace SCP999
                     agent.acceleration = 15f;
                     if (!MoveInFrontOfTurret())
                     {
-                        logIfDebug("Stop Blocking");
+                        logger.LogDebug("Stop Blocking");
                         SwitchToBehaviourStateCustom(State.Following);
                         blockedTurret = null;
                         DoAnimationClientRpc(stretchAnim, false);
@@ -356,8 +351,8 @@ namespace SCP999
 
         public void SetOutsideOrInside()
         {
-            GameObject closestOutsideNode = GetClosestAINode(false);
-            GameObject closestInsideNode = GetClosestAINode(true);
+            GameObject closestOutsideNode = Utils.outsideAINodes.GetClosestToPosition(transform.position, (x) => x.transform.position)!;
+            GameObject closestInsideNode = Utils.insideAINodes.GetClosestToPosition(transform.position, (x) => x.transform.position)!;
 
             if (Vector3.Distance(transform.position, closestOutsideNode.transform.position) < Vector3.Distance(transform.position, closestInsideNode.transform.position))
             {
@@ -365,34 +360,15 @@ namespace SCP999
             }
         }
 
-        public GameObject GetClosestAINode(bool inside)
-        {
-            float closestDistance = Mathf.Infinity;
-            GameObject closestNode = null!;
-
-            GameObject[] nodes = inside ? Utils.GetInsideAINodes() : Utils.GetOutsideAINodes();
-
-            foreach (GameObject node in nodes)
-            {
-                float distanceToNode = Vector3.Distance(transform.position, node.transform.position);
-                if (distanceToNode < closestDistance)
-                {
-                    closestDistance = distanceToNode;
-                    closestNode = node;
-                }
-            }
-            return closestNode;
-        }
-
         public void GetInJar()
         {
-            logIfDebug("GetInJar");
+            logger.LogDebug("GetInJar");
             GetInJarServerRpc(localPlayer.actualClientId);
         }
 
         public bool TargetClosestEntity()
         {
-            //logIfDebug("Targetting closest entitiy");
+            //logger.LogDebug("Targetting closest entitiy");
             if (targetPlayer != null && followPlayer && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange * 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
             else if (targetEnemy != null && followEnemy && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
             else { return false; }
@@ -468,7 +444,7 @@ namespace SCP999
         {
             if (targetPlayer != null)
             {
-                //logIfDebug("Player hp: " + targetPlayer.health);
+                //logger.LogDebug("Player hp: " + targetPlayer.health);
                 if (targetPlayer.health >= 100 || targetPlayer.isPlayerDead)
                 {
                     SwitchToBehaviourStateCustom(State.Following);
@@ -480,7 +456,7 @@ namespace SCP999
             else if (targetEnemy != null)
             {
                 int maxHealth = targetEnemy.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
-                //logIfDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
+                //logger.LogDebug("Enemy hp: " + targetEnemy.enemyHP + "/" + maxHealth);
 
                 if (targetEnemy.enemyHP >= maxHealth || targetEnemy.isEnemyDead)
                 {
@@ -505,7 +481,7 @@ namespace SCP999
                     {
                         if (timeSinceBlockSFX > 0.5f)
                         {
-                            logIfDebug("Playing hitSFX");
+                            logger.LogDebug("Playing hitSFX");
                             int randomIndex = Random.Range(0, hitSFXList.Count - 1);
                             creatureSFX.PlayOneShot(hitSFXList[randomIndex], 1f);
                             timeSinceBlockSFX = 0f;
@@ -535,7 +511,7 @@ namespace SCP999
                     {
                         if (Sweets.Contains(item.itemProperties.itemName) && item.hasBeenHeld && !item.heldByPlayerOnServer)
                         {
-                            logIfDebug("Moving to item: " + item.itemProperties.itemName);
+                            logger.LogDebug("Moving to item: " + item.itemProperties.itemName);
                             agent.stoppingDistance = 0f;
                             SetDestinationToPosition(item.transform.position, false);
                             return true;
@@ -567,7 +543,7 @@ namespace SCP999
                     {
                         if (Sweets.Contains(item.itemProperties.itemName))
                         {
-                            logIfDebug("Eating item: " + item.itemProperties.itemName);
+                            logger.LogDebug("Eating item: " + item.itemProperties.itemName);
                             if (item.itemProperties.itemName == "SCP-559") { ChangeSizeClientRpc(transform.localScale.y / 2); }
                             if (item.itemProperties.itemName == "Black Candy") { MakeHyper(60f); }
                             if (item.itemProperties.itemName == "Cake") { healingBuffTime += 10f; }
@@ -575,7 +551,7 @@ namespace SCP999
                             item.NetworkObject.Despawn(true);
 
                             candyEaten += 1;
-                            logIfDebug("Candy eaten: " + candyEaten);
+                            logger.LogDebug("Candy eaten: " + candyEaten);
                             healingBuffTime += 20f;
 
                             if (candyEaten >= maxCandy) { MakeHyper(30f); }
@@ -697,7 +673,7 @@ namespace SCP999
                 timeSinceHealing = 0f;
                 if (player.health < 100)
                 {
-                    //logIfDebug("Healing player: " + player.playerUsername);
+                    //logger.LogDebug("Healing player: " + player.playerUsername);
 
                     int newHealthAmount;
                     if (healingBuffTime > 0f) { newHealthAmount = player.health + (playerHealAmount * 2); }
@@ -721,7 +697,7 @@ namespace SCP999
                 timeSinceHealing = 0f;
                 int maxHealth = enemyToHeal.enemyType.enemyPrefab.GetComponent<EnemyAI>().enemyHP;
 
-                //logIfDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
+                //logger.LogDebug($"{enemyToHeal.enemyType.enemyName} HP: {enemyToHeal.enemyHP}/{maxHealth}");
 
                 if (enemyToHeal.enemyHP < maxHealth)
                 {
@@ -785,14 +761,14 @@ namespace SCP999
         [ClientRpc]
         private void DoAnimationClientRpc(int id, bool value)
         {
-            //logIfDebug($"Setting {id} to {value}");
+            //logger.LogDebug($"Setting {id} to {value}");
             creatureAnimator.SetBool(id, value);
         }
 
         [ServerRpc(RequireOwnership = false)]
         private void GetInJarServerRpc(ulong clientId)
         {
-            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+            if (IsServer)
             {
                 PlayerControllerB player = PlayerFromId(clientId);
                 player.currentlyHeldObjectServer.GetComponent<ContainmentJarBehavior>().ChangeJarContentsClientRpc(ContainmentJarBehavior.Contents.SCP999);
@@ -809,14 +785,14 @@ namespace SCP999
         [ServerRpc(RequireOwnership = false)]
         public void PlayerTookDamageServerRpc(ulong clientId)
         {
-            if (IsServerOrHost)
+            if (IsServer)
             {
                 PlayerControllerB player = PlayerFromId(clientId);
                 if (player == null) { return; }
                 if (tamed && player != targetPlayer) { return; }
 
                 float multiplier = 2 - (player.health / 100f);
-                float range = configPlayerDetectionRange.Value * multiplier;
+                float range = playerDetectionRange * multiplier;
 
                 if (Vector3.Distance(transform.position, player.transform.position) <= range)
                 {
@@ -831,14 +807,14 @@ namespace SCP999
         [ClientRpc]
         private void ChangeSizeClientRpc(float size) // TODO: Test this
         {
-            logIfDebug("Changing size to " + size);
+            logger.LogDebug("Changing size to " + size);
             transform.localScale = new Vector3(size, size, size);
         }
 
         [ServerRpc(RequireOwnership = false)]
         public void BlockTurretFireServerRpc(NetworkObjectReference netObjRef)
         {
-            if (IsServerOrHost)
+            if (IsServer)
             {
                 if (netObjRef.TryGet(out NetworkObject networkObject))
                 {

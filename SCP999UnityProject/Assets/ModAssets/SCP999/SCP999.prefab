@@ -177,7 +177,7 @@ AudioSource:
   m_GameObject: {fileID: 1000051593962637334}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 24300008, guid: cb9fb87df5ca10840a2a5b2dc5a4284c,
+  OutputAudioMixerGroup: {fileID: 24300008, guid: 64b08a5192e203847bb952b79319ef18,
     type: 2}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
@@ -190,7 +190,7 @@ AudioSource:
   Priority: 128
   DopplerLevel: 1
   MinDistance: 5
-  MaxDistance: 25
+  MaxDistance: 10
   Pan2D: 0
   rolloffMode: 1
   BypassEffects: 0
@@ -370,10 +370,13 @@ MonoBehaviour:
   disableTriggerMesh: 0
   RandomChanceTrigger: 0
   randomChancePercentage: 0
+  onInteractEarlyOtherClients:
+    m_PersistentCalls:
+      m_Calls: []
   onInteract:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1111736658232723545}
+      - m_Target: {fileID: 2687534968642677551}
         m_TargetAssemblyTypeName: SCP999.SCP999AI, ProjectSCP.SCP999
         m_MethodName: GetInJar
         m_Mode: 1
@@ -384,7 +387,7 @@ MonoBehaviour:
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
-        m_CallState: 1
+        m_CallState: 2
   onInteractEarly:
     m_PersistentCalls:
       m_Calls: []
@@ -403,6 +406,14 @@ MonoBehaviour:
   animationString: 
   lockPlayerPosition: 0
   playerPositionNode: {fileID: 0}
+  lockedPlayer: {fileID: 0}
+  clampLooking: 0
+  setVehicleAnimation: 0
+  minVerticalClamp: 0
+  maxVerticalClamp: 0
+  horizontalClamp: 0
+  allowUseWhileInAnimation: 0
+  overridePlayerParent: {fileID: 0}
   isLadder: 0
   topOfLadderPosition: {fileID: 0}
   useRaycastToGetTopPosition: 0
@@ -547,9 +558,9 @@ GameObject:
   - component: {fileID: 5057336929424255767}
   - component: {fileID: 7151736929033763950}
   - component: {fileID: 2526751604808999410}
-  - component: {fileID: 1111736658232723545}
   - component: {fileID: 2333382000282905813}
   - component: {fileID: 3361357112928277475}
+  - component: {fileID: 2687534968642677551}
   m_Layer: 19
   m_Name: SCP999
   m_TagString: Enemy
@@ -626,7 +637,28 @@ MonoBehaviour:
   SpawnWithObservers: 1
   DontDestroyWithOwner: 1
   AutoObjectParentSync: 1
---- !u!114 &1111736658232723545
+--- !u!95 &2333382000282905813
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1585482150073968312}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: a2739cefb3fdf404e8af4eef03a64876, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3361357112928277475
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -635,7 +667,38 @@ MonoBehaviour:
   m_GameObject: {fileID: 1585482150073968312}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 40305957, guid: cd465ff15d6a1084490c34454858f639, type: 3}
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  Interpolate: 1
+  SlerpPosition: 0
+--- !u!114 &2687534968642677551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1585482150073968312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 40305957, guid: d03d7ac043357ce478a159f4e18d032c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   enemyType: {fileID: 11400000, guid: ec93f0d2d91cc504993634331dabc12c, type: 2}
@@ -707,6 +770,7 @@ MonoBehaviour:
   serverRotation: {x: 0, y: 0, z: 0}
   agent: {fileID: 7151736929033763950}
   allAINodes: []
+  agentMask: 0
   targetNode: {fileID: 0}
   favoriteSpot: {fileID: 0}
   tempDist: 0
@@ -727,8 +791,9 @@ MonoBehaviour:
   ventAnimationFinished: 0
   isEnemyDead: 0
   daytimeEnemyLeaving: 0
-  enemyHP: 0
-  openDoorSpeedMultiplier: 0
+  enemyHP: 1
+  nodesTempArray: []
+  openDoorSpeedMultiplier: 1
   useSecondaryAudiosOnAnimatedObjects: 0
   currentSearch:
     unsearchedNodes: []
@@ -737,13 +802,14 @@ MonoBehaviour:
     waitingForTargetNode: 0
     choseTargetNode: 0
     currentSearchStartPosition: {x: 0, y: 0, z: 0}
-    loopSearch: 0
+    loopSearch: 1
     timesFinishingSearch: 0
     nodesEliminatedInCurrentSearch: 0
     inProgress: 0
     calculatingNodeInSearch: 0
-    searchWidth: 0
-    searchPrecision: 0
+    startedSearchAtSelf: 0
+    searchWidth: 200
+    searchPrecision: 5
     randomized: 0
     onlySearchNodesInLOS: 0
   DebugEnemy: 0
@@ -752,7 +818,11 @@ MonoBehaviour:
   postStunInvincibilityTimer: 0
   stunnedByPlayer: {fileID: 0}
   debugEnemyAI: 0
+  removedPowerLevel: 0
   isOutside: 0
+  hitsPhysicsObjects: 0
+  gotFarthestNodeAsync: 0
+  overrideSettingEnemyMeshes: 0
   turnCompass: {fileID: 3102372825565161814}
   ScanNode: {fileID: 6874053256142709523}
   hitSFXList:
@@ -774,60 +844,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c10ed2bd0d26fed48b57c979a0e0759a, type: 3}
   - {fileID: 8300000, guid: bf4fc94a0faa9dc43864460b8b70fb6d, type: 3}
   jarTrigger: {fileID: 5309153180052499262}
-  lizzieSteamId: 76561199094139351
-  snowySteamId: 76561198253760639
---- !u!95 &2333382000282905813
-Animator:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1585482150073968312}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: a2739cefb3fdf404e8af4eef03a64876, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
---- !u!114 &3361357112928277475
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1585482150073968312}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  UseUnreliableDeltas: 0
-  SyncPositionX: 1
-  SyncPositionY: 1
-  SyncPositionZ: 1
-  SyncRotAngleX: 1
-  SyncRotAngleY: 1
-  SyncRotAngleZ: 1
-  SyncScaleX: 1
-  SyncScaleY: 1
-  SyncScaleZ: 1
-  PositionThreshold: 0.001
-  RotAngleThreshold: 0.01
-  ScaleThreshold: 0.01
-  UseQuaternionSynchronization: 0
-  UseQuaternionCompression: 0
-  UseHalfFloatPrecision: 0
-  InLocalSpace: 0
-  Interpolate: 1
-  SlerpPosition: 0
+  lizzieSteamId: 0
+  snowySteamId: 0
 --- !u!1 &1899959549073515087
 GameObject:
   m_ObjectHideFlags: 0
@@ -1010,9 +1028,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d7127b8f98ca8ec9896b384a71d39a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainScript: {fileID: 1111736658232723545}
+  mainScript: {fileID: 2687534968642677551}
   canCollideWithEnemies: 1
   onlyCollideWhenGrounded: 0
+  alwaysAllowHitting: 0
 --- !u!65 &400734116234054283
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1197,13 +1216,13 @@ AudioSource:
   m_GameObject: {fileID: 2305238989528620735}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 24300008, guid: cb9fb87df5ca10840a2a5b2dc5a4284c,
+  OutputAudioMixerGroup: {fileID: 24300008, guid: 64b08a5192e203847bb952b79319ef18,
     type: 2}
-  m_audioClip: {fileID: 8300000, guid: 40248eaf708e242598b42c12c9adc3ed, type: 3}
-  m_PlayOnAwake: 1
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 0
   m_Volume: 0.6
   m_Pitch: 1
-  Loop: 1
+  Loop: 0
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -1641,9 +1660,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d7127b8f98ca8ec9896b384a71d39a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainScript: {fileID: 1111736658232723545}
+  mainScript: {fileID: 2687534968642677551}
   canCollideWithEnemies: 1
   onlyCollideWhenGrounded: 0
+  alwaysAllowHitting: 0
 --- !u!1 &4853691013082533998
 GameObject:
   m_ObjectHideFlags: 0
@@ -1688,7 +1708,7 @@ GameObject:
   - component: {fileID: 7380197539329587604}
   m_Layer: 22
   m_Name: ScanNode
-  m_TagString: DoNotSet
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

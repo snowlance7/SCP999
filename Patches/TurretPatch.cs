@@ -18,7 +18,7 @@ namespace SCP999.Patches
     [HarmonyPatch(typeof(Turret))]
     internal class TurretPatch
     {
-        private static ManualLogSource logger = LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Turret.SwitchTurretMode))]

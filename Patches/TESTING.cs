@@ -1,14 +1,7 @@
 ﻿using BepInEx.Logging;
-using GameNetcodeStuff;
 using HarmonyLib;
-using LethalLib.Modules;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.UIElements;
 using static SCP999.Plugin;
 
 namespace SCP999.Patches
@@ -16,7 +9,7 @@ namespace SCP999.Patches
     [HarmonyPatch]
     internal class TESTING : MonoBehaviour
     {
-        private static ManualLogSource logger = Plugin.LoggerInstance;
+        private static ManualLogSource logger = Plugin.logger;
 
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
@@ -29,7 +22,7 @@ namespace SCP999.Patches
             if (localPlayer.playerSteamId != 76561198253760639) { return; }
             string msg = __instance.chatTextField.text;
             string[] args = msg.Split(" ");
-            logIfDebug(msg);
+            logger.LogDebug(msg);
 
             switch (args[0])
             {

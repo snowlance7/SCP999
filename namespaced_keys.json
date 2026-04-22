@@ -1,0 +1,10 @@
+{
+  "ScpnineninenineEnemyKeys": {
+    "__type": "DawnEnemyInfo",
+    "SCPNineNineNine": "scpnineninenine:scpnineninenine"
+  },
+  "ScpnineninenineItemKeys": {
+    "__type": "DawnItemInfo",
+    "Jar": "scpnineninenine:jar"
+  }
+}
