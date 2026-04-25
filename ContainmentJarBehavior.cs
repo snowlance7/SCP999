@@ -7,6 +7,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using static SCP999.Plugin;
+using SnowyLib;
 
 namespace SCP999
 {
@@ -17,9 +18,9 @@ namespace SCP999
         public ScanNodeProperties ScanNode = null!;
         public MeshRenderer renderer = null!;
 
-        int jar999Value = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("SCP-999 Value").Value; // 1
-        int jarSlimeValue = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("Slime Value").Value; // 50
-        bool slimeTaming = ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<bool>("Slime Taming").Value; // true
+        int jar999Value => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("SCP-999 Value").Value; // 1
+        int jarSlimeValue => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("Slime Value").Value; // 50
+        bool slimeTaming => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<bool>("Slime Taming").Value; // true
 
         internal enum Contents
         {

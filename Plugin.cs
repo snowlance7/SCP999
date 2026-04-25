@@ -10,11 +10,13 @@ using System.Linq;
 using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
+using SnowyLib;
 
 namespace SCP999
 {
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     [BepInDependency(DawnLib.PLUGIN_GUID)]
+    [BepInDependency(SnowyLib.MyPluginInfo.PLUGIN_GUID)]
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance = null!;

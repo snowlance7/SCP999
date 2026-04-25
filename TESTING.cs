@@ -2,6 +2,7 @@ using HarmonyLib;
 using System.Linq;
 using UnityEngine;
 using static SCP999.Plugin;
+using SnowyLib;
 
 /* bodyparts
  * 0 head

@@ -7,13 +7,13 @@ using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using static SCP999.Plugin;
+using SnowyLib;
+using static SnowyLib.Utils;
 
 namespace SCP999
 {
     public class SCP999AI : EnemyAI
     {
-        private static ManualLogSource logger = Plugin.logger;
-
 #pragma warning disable 0649
         public Transform turnCompass = null!;
         public ScanNodeProperties ScanNode = null!;
