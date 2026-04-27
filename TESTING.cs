@@ -28,10 +28,7 @@ namespace SCP999
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
-            if (!Utils.isBeta) { return; }
             if (!Utils.testing) { return; }
-
-            logger.LogDebug("PingScanTestPerformed");
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]
