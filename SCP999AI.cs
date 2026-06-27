@@ -17,6 +17,7 @@ using Dawn.Utils;
 // TODO: Make him only prioritize healing players that arent being targeted by an enemy? so he prioritizes players that have survived or gotten away? maybe he does this if multiple players are being attacked or multiple enemies attacking players
 // TODO: Add more sweets you can give him? and make it so feeding him sweets makes him go into hyper mode and he can heal and move faster during emergencies, only works on tamed?
 // TODO: If theres two SCP999's they combine and create a bigger scp999 with bigger collider for healing (parent collider to mesh instead of main object? or scale up main transform?)
+// TODO: MAKE A SHIP FURNITURE THATS LIKE A BED FOR SCP999 THAT HE'LL GO TO WHEN CALLED TO IT OR WHEN THE SHIP IS ABOUT TO LEAVE
 
 namespace SCP999
 {
