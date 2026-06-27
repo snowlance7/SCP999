@@ -85,7 +85,7 @@ namespace SCP999
             base.Start();
             logger.LogDebug("SCP-999 Spawned");
 
-            entityMask = Utils.CreateMask("Player", "Enemy"); // TODO: Make sure layer names are correct
+            entityMask = Utils.CreateMask("Player", "Enemies");
 
             currentBehaviourStateIndex = (int)State.Roaming;
 
