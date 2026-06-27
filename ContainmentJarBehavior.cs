@@ -7,20 +7,17 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using static SCP999.Plugin;
+using static SCP999.Configs;
 using SnowyLib;
 
 namespace SCP999
 {
     internal class ContainmentJarBehavior : PhysicsProp
     {
-        public Sprite[] ItemIcons = null!;
-        public Material[] ItemMaterials = null!;
-        public ScanNodeProperties ScanNode = null!;
+        public Sprite[] icons = null!;
+        public Material[] materials = null!;
+        public ScanNodeProperties scanNode = null!;
         public MeshRenderer renderer = null!;
-
-        int jar999Value => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("SCP-999 Value").Value; // 1
-        int jarSlimeValue => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<int>("Slime Value").Value; // 50
-        bool slimeTaming => ContentHandler<SCP999ContentHandler>.Instance.ContainmentJar!.GetConfig<bool>("Slime Taming").Value; // true
 
         internal enum Contents
         {
@@ -43,7 +40,7 @@ namespace SCP999
                 if (playerHeldBy == localPlayer)
                 {
                     int slot = localPlayer.ItemSlots.IndexOf(this);
-                    HUDManager.Instance.itemSlotIcons[slot].sprite = ItemIcons[(int)JarContents];
+                    HUDManager.Instance.itemSlotIcons[slot].sprite = icons[(int)JarContents];
                 }
             }
         }
@@ -76,7 +73,7 @@ namespace SCP999
         public void ChangeJarContentsOnLocalClient(Contents contents)
         {
             logger.LogDebug("ChangeJarContentsOnLocalClient: " + contents);
-            renderer.material = ItemMaterials[(int)contents];
+            renderer.material = materials[(int)contents];
             JarContents = contents;
 
             switch (JarContents)
@@ -94,7 +91,7 @@ namespace SCP999
                     break;
             }
 
-            ScanNode.subText = "Contents: " + contents.ToString();
+            scanNode.subText = "Contents: " + contents.ToString();
         }
 
         public override void SetControlTipsForItem()
