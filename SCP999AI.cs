@@ -40,6 +40,7 @@ namespace SCP999
         readonly static int hashHyperDancing = Animator.StringToHash("hyperDancing");
         readonly static int hashWalk = Animator.StringToHash("walking");
         readonly static int hashDancing = Animator.StringToHash("dancing");
+        readonly static int hashEmoteNumber = Animator.StringToHash("emoteNumber");
 
         Turret? blockedTurret;
 
@@ -50,7 +51,6 @@ namespace SCP999
         float timeSinceHugSFX;
         float hugTime;
 
-        float rangeMultiplier = 1f;
         float followingRange;
 
         bool walking;
@@ -64,6 +64,12 @@ namespace SCP999
         PlayerControllerB? tamedByPlayer;
 
         bool dancing;
+
+        bool roaming;
+
+        bool staying;
+
+        int entityMask;
 
         public enum State
         {
@@ -79,6 +85,8 @@ namespace SCP999
             base.Start();
             logger.LogDebug("SCP-999 Spawned");
 
+            entityMask = Utils.CreateMask("Player", "Enemy"); // TODO: Make sure layer names are correct
+
             currentBehaviourStateIndex = (int)State.Roaming;
 
             if (!RoundManager.Instance.SpawnedEnemies.Contains(this))
@@ -89,9 +97,7 @@ namespace SCP999
             if (IsServer)
             {
                 if (transform.localScale.y != size)
-                {
                     ChangeSizeClientRpc(size);
-                }
 
                 nav.SetAllValues(base.transform.position.y > -80f);
                 nav.StartSearchRoutine(Mathf.Infinity);
@@ -257,6 +263,12 @@ namespace SCP999
             }
         }
 
+        void SetRoam(bool value)
+        {
+            if (roaming == value) { return; }
+            
+        }
+
         private bool BabyIsCryingNearby()
         {
             CaveDwellerAI? baby = RoundManager.Instance.SpawnedEnemies.OfType<CaveDwellerAI>().Where(x => x.babyCrying && Vector3.Distance(transform.position, x.transform.position) < x.babyCryingAudio.maxDistance).FirstOrDefault();
@@ -294,22 +306,27 @@ namespace SCP999
             SwitchToBehaviourClientRpc((int)State.Following);
         }
 
-        public void GetInJar()
+        void DoCommand()
+        {
+            if (tamedByPlayer == null || !tamedByPlayer.performingEmote) { return; }
+            int emoteNumber = tamedByPlayer.playerBodyAnimator.GetInteger(hashEmoteNumber);
+
+            if (emoteNumber == 1) // Dancing
+            {
+                targetPlayer = tamedByPlayer;
+                staying = false;
+            }
+            else if (emoteNumber == 2) // Pointing
+            {
+                if (!Physics.Raycast(tamedByPlayer.gameplayCamera.transform.position, tamedByPlayer.gameplayCamera.transform.forward, out raycastHit, 10f, entityMask)) { return; }
+                // TODO
+            }
+        }
+
+        public void GetInJar() // Interact Trigger
         {
             logger.LogDebug("GetInJar");
             GetInJarServerRpc(localPlayer.actualClientId);
-        }
-
-        public bool TargetClosestInLineOfSight()
-        {
-            if (targetPlayer != null)
-            {
-                checklin
-            }
-            //logger.LogDebug("Targetting closest entitiy");
-            if (targetPlayer != null && TargetClosestPlayer() && (Vector3.Distance(transform.position, targetPlayer.transform.position) < playerDetectionRange * 2 || CheckLineOfSightForPosition(targetPlayer.transform.position))) { return true; }
-            else if (targetEnemy != null && TargetClosestEnemy(5f) && (Vector3.Distance(transform.position, targetEnemy.transform.position) < enemyDetectionRange * 2 || CheckLineOfSightForPosition(targetEnemy.transform.position))) { return true; }
-            else { return false; }
         }
 
         void FollowTarget()
@@ -330,25 +347,8 @@ namespace SCP999
             }
             else { return; }
 
+
             SetDestinationToPosition(pos);
-        }
-
-        void SetTarget(PlayerControllerB player)
-        {
-            targetPlayer = player;
-            targetEnemy = null;
-        }
-
-        void SetTarget(EnemyAI enemy)
-        {
-            targetPlayer = null;
-            targetEnemy = enemy;
-        }
-
-        void SetTargetNull()
-        {
-            targetPlayer = null;
-            targetEnemy = null;
         }
 
         void MoveToHealTarget()
@@ -498,7 +498,7 @@ namespace SCP999
         {
             base.ReachedNodeInSearch();
             int randomIndex = Random.Range(0, roamSFXList.Count - 1);
-            creatureVoice.PlayOneShot(roamSFXList[randomIndex], 1f);
+            creatureVoice.PlayOneShot(roamSFXList[randomIndex], 1f); // TODO: not networked?
         }
 
         public override void OnCollideWithPlayer(Collider other)

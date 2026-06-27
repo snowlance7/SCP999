@@ -36,24 +36,27 @@ namespace SCP999
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]
-        public static void SubmitChat_performedPrefix(HUDManager __instance)
+        public static bool SubmitChat_performedPrefix(HUDManager __instance)
         {
             try
             {
-                if (!Utils.testing || !__instance.IsServer) { return; }
+                if ((!Utils.testing || !localPlayer.IsServer) && localPlayer.actualClientId != Utils.SnowySteamID) { return true; } // TODO
                 string msg = __instance.chatTextField.text;
                 string[] args = msg.Split(" ");
-                logger.LogDebug(msg);
+                bool submit = false;
 
                 switch (args[0])
                 {
                     default:
+                        submit = true;
                         break;
                 }
+
+                return submit;
             }
             catch
             {
-                return;
+                return true;
             }
         }
     }
